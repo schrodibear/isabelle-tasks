@@ -1,0 +1,102 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[english]{babel}
+\usepackage{isabelle,isabellesym}
+
+\usepackage{geometry}
+\geometry{margin=0.8in, rmargin=0.4in}
+% \geometry{tmargin=1.35in, bmargin=1.35in}
+
+% further packages required for unusual symbols (see also
+% isabellesym.sty), use only when needed
+
+\usepackage{amssymb}
+\usepackage{wasysym}
+\usepackage{stmaryrd}
+%for \<leadsto>, \<box>, \<diamond>, \<sqsupset>, \<mho>, \<Join>,
+  %\<lhd>, \<lesssim>, \<greatersim>, \<lessapprox>, \<greaterapprox>,
+  %\<triangleq>, \<yen>, \<lozenge>
+
+%\usepackage{eurosym}
+  %for \<euro>
+
+%\usepackage[only,bigsqcap]{stmaryrd}
+  %for \<Sqinter>
+
+%\usepackage{eufrak}
+  %for \<AA> ... \<ZZ>, \<aa> ... \<zz> (also included in amssymb)
+
+%\usepackage{textcomp}
+  %for \<onequarter>, \<onehalf>, \<threequarters>, \<degree>, \<cent>,
+  %\<currency>
+
+\usepackage{xcolor}
+  %for colorization
+
+\usepackage{tabto}
+
+% this should be the last package used
+\usepackage{pdfsetup}
+
+\definecolor{command}{RGB}{0, 80, 144}
+\definecolor{keyword}{RGB}{0, 132, 96}
+\definecolor{math}{RGB}{16, 0, 128}
+\newcommand{\mathstart}{\small\color{math}\it\bfseries}
+\newcommand{\mathend}{\small\normalcolor\it}
+
+\let\oldisabellestyleit\isabellestyleit
+\renewcommand{\isabellestyleit}{%
+\oldisabellestyleit%
+\def\isachardoublequoteopen{{\color{math}\scriptsize\it\texttt{"}}\aftergroup\mathstart}%
+\def\isachardoublequoteclose{{\color{math}\scriptsize\it\texttt{"}}\aftergroup\mathend}%
+\def\isacharbackquote{\rm\`{}}% for backtick that looks nicer with | ( in |`)
+\def\isacharat{\raisebox{-0.025em}{\textit{\scriptsize@}}}%
+\def\isacharunderscore{\texttt{\_}}%
+\def\isachartilde{\isamath{\sim}}%
+\def\isacharunderscorekeyword{\texttt{\_}}%
+}
+
+\def\marginsymbol{\protect\marginsymbolhelper}
+\def\marginsymbolhelper{\tabto*{-0.5cm}\makebox[0cm]{${}\blacktriangleright{}$}\tabto*{\TabPrevPos}}
+
+% urls in roman style, theory text in math-similar italics
+\urlstyle{rm}
+\isabellestyle{it}
+
+% for uniform font size
+%\renewcommand{\isastyle}{\isastyleminor}
+
+\renewcommand{\isastyle}{\small\it\color{black}}
+\renewcommand{\isastyletext}{\normalsize\rm\color{black}}
+\renewcommand{\isastyletxt}{\rm\color{black}}
+\renewcommand{\isastylecmt}{\rm\color{black}}
+
+\let\oldisakeyword\isakeyword
+\renewcommand{\isakeyword}[1]{{\color{keyword}\oldisakeyword{#1}}}
+\renewcommand{\isacommand}[1]{{\color{command}\oldisakeyword{#1}}}
+
+\renewcommand{\tab}{\phantom{|}~}
+
+\begin{document}
+
+\title{Isabelle/ML programming tasks}
+\author{Mikhail Mandrykin}
+\maketitle
+
+\tableofcontents\newpage
+
+% sane default for proof documents
+\parindent 0pt\parskip 0.5ex
+
+% generated text of all theories
+\input{session}
+
+% optional bibliography
+%\bibliographystyle{abbrv}
+%\bibliography{root}
+
+\end{document}
+
+%%% Local Variables:
+%%% mode: latex
+%%% TeX-master: t
+%%% End:
