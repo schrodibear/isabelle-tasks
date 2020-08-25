@@ -186,7 +186,7 @@ text\<open>
   (\<open>goal\<close> : \<^ML_type>\<open>int\<close>) :\\
   \<^ML_type>\<open>tactic\<close>
   \end{tabular}\\
-  A shorthand for \<open>resolve_tac ctxt thms THEN_ALL_NEW assume_tac ctxt\<close>. Convenient for applying 
+  A shorthand for \<open>resolve_tac ctxt thms THEN_ALL_NEW assume_tac ctxt\<close>. Convenient for applying
   theorems with several premises that can be solved by assumption.
 
   \<^bigskip>
@@ -497,6 +497,8 @@ lemma "A \<Longrightarrow> A" apply (tactic \<open>HEADGOAL (assume_tac \<^conte
 
 subsection \<open>Solutions\<close>
 
+subsubsection \<open>Problem 1\<close>
+
 setup \<open>Sign.declare_const_global ((\<^binding>\<open>w\<close>, \<^typ>\<open>'a set \<Rightarrow> 'a set \<Rightarrow> 'a\<close>), NoSyn) #> snd\<close>
 
 setup \<open>
@@ -508,8 +510,11 @@ setup \<open>
    snd
 \<close>
 
-\<comment> \<open>
-\<^theory_text>\<open>
+thm w_def
+
+subsubsection \<open>Problem 2\<close>
+
+experiment begin
 lemma set_neqD:
   "s \<noteq> t \<Longrightarrow> w s t \<in> s \<and> w s t \<notin> t \<or> w s t \<notin> s \<and> w s t \<in> t"
   apply (unfold set_eq_iff not_all HOL.nnf_simps(5))
@@ -518,8 +523,7 @@ lemma set_neqD:
   apply (subst (2) conj_commute)
   apply (unfold w_def Diff_iff[symmetric])
   by (intro someI)
-\<close>
-\<close>
+end
 
 ML \<open>
   val prove_set_neqD =
@@ -542,13 +546,13 @@ ML \<open>
 setup \<open>prove_set_neqD\<close>
 thm set_neqD
 
-\<comment> \<open>
-\<^theory_text>\<open>
+subsubsection \<open>Problem 3\<close>
+
+experiment begin
 lemma sample1: "x \<in> {1} \<union> {2} \<Longrightarrow> x \<le> (2 :: int)"
   apply (elim UnE singletonE)
   by (linarith)+
-\<close>
-\<close>
+end
 
 ML \<open>
   val prove_sample1 =
@@ -565,14 +569,14 @@ ML \<open>
 setup \<open>prove_sample1\<close>
 thm sample1
 
-\<comment> \<open>
-\<^theory_text>\<open>
+subsubsection \<open>Problem 4\<close>
+
+experiment begin
 lemma member_neqI: "x \<in> A \<Longrightarrow> y \<notin> A \<Longrightarrow> x \<noteq> y"
   apply (cases "x = y")
    apply hypsubst
   by (erule (1) notE)
-\<close>
-\<close>
+end
 
 ML \<open>
   val prove_member_neqI =
@@ -589,9 +593,11 @@ ML \<open>
 \<close>
 
 setup \<open>prove_member_neqI\<close>
+thm member_neqI
 
-\<comment> \<open>
-\<^theory_text>\<open>
+subsubsection \<open>Problem 5\<close>
+
+experiment begin
 lemma sample2: "\<lbrakk>4 < u; u < 6; u \<in> x \<union> y; x \<inter> {5 :: int} \<noteq> {5}; z = {}\<rbrakk> \<Longrightarrow> y - z \<noteq> {}"
   apply (elim UnE set_neqD[elim_format])
    apply (elim disjE conjE IntE)
@@ -614,8 +620,7 @@ lemma sample2: "\<lbrakk>4 < u; u < 6; u \<in> x \<union> y; x \<inter> {5 :: in
   apply (erule (1) subst[where P="\<lambda> x. _ \<in> x", elim_format])
   apply (erule emptyE)
   done
-\<close>
-\<close>
+end
 
 ML \<open>
   val prove_sample2 =
@@ -642,7 +647,7 @@ ML \<open>
                     [forward_tac ctxt [@{thm member_neqI}],
                      assume_tac ctxt,
                      Lin_Arith.tac ctxt]]],
-             
+
              EVERY'
                [Induct_Tacs.case_tac ctxt "u \<in> z" [] NONE,
                 RANGE
