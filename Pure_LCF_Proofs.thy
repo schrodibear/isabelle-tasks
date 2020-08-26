@@ -11,29 +11,30 @@ subsection \<open>Isabelle/ML interfaces\<close>
 text \<open>
   \marginsymbol
   \<^ML_text>\<open>datatype term =
-    Const of string * typ |
-    Free of string * typ |
-    Var of indexname * typ |
-    Bound of int |
-    Abs of string * typ * term |
-    $ of term * term\<close>\\
+  Const of string * typ |
+  Free of string * typ |
+  Var of indexname * typ |
+  Bound of int |
+  Abs of string * typ * term |
+  $ of term * term\<close>\\
   The main type representing Isabelle terms. Note that there are three distinct kind of variables:
   \<^item> \<open>free\<close> variables (represented by the \<^ML>\<open>Free\<close> constructor and displayed in blue)
     are those well-known \<open>arbitrary, but fixed\<close>
     variables that are normally used during mathematical
     proofs and are later \<open>generalized\<close> (e.\,g. as in the usual phrase `since \<open>\<epsilon>\<close> was chosen arbitrarily') to obtain a
-    quantified proposition (e.\,g. \<open>\<And> \<epsilon>. P \<epsilon>\<close>). In Isabelle, however, the top-level universal quantification is
+    quantified proposition (e.\,g. \mbox{\<open>\<And> \<epsilon>. P \<epsilon>\<close>}). In Isabelle, however, the top-level universal quantification is
     \<open>implicit\<close> and is expressed using \<open>schematic\<close> variables.
   \<^item> \<open>schematic\<close> variables (represented by the \<^ML>\<open>Var\<close> constructor and displayed in blue with a question mark e.\,g.
     \<open>?x\<close>) are top-level universally quantified variables. They can be instantiated directly using
     designated Isabelle/ML interfaces e.\,g. \<^ML>\<open>Thm.instantiate'\<close>. This is unlike \<open>bound\<close> variables e.\,g.
     \<open>\<And>x. \<dots> x \<dots>\<close>, where a special theorem (\<open>rule\<close>) has to be employed to instantiate them
-    (e.\,g. \<open>meta_spec\<close>:@{thm meta_spec}).
+    (e.\,g. \<open>meta_spec\<close>: \mbox{@{thm meta_spec}}).
   \<^item> \<open>bound\<close> variables (represented by the \<^ML>\<open>Bound\<close> constructor and displayed in green) are variables that exist
-    within a clearly delimited \<open>scope\<close> (represented by the \<^ML>\<open>Abs\<close> constructor). \<^ML>\<open>Abs\<close> corresponds to
-    lambda-abstraction, while occurrences of bound variables are designated not by their names, but by
+    within a clearly delimited \<open>scope\<close> represented by the \<^ML>\<open>Abs\<close> constructor that corresponds to
+    lambda-abstraction. Occurrences of bound variables are designated not by their names, but by
     \<open>de Bruijn indices\<close> counted from \<open>0\<close> in the \<open>inside-out\<close> direction (e.\,g. the body of \<open>\<lambda> x y. x y\<close> is
-    \<open>Bound 1 $ Bound 0\<close>).
+    \mbox{\<open>Bound 1 $ Bound 0\<close>}).
+
 
   Relative to a \<open>context\<close>, free variables are also categorized into \<open>locally fixed\<close>
   (fixed at the top level of the proof, displayed in blue) and \<open>skolem\<close> variables
@@ -49,22 +50,18 @@ text \<open>
   \<^ML_text>\<open>type\<close> \<^ML_type>\<open>cterm\<close>\\
   The type of \<open>certified\<close> terms relative to a certain \<open>context\<close>. Those terms are guaranteed to be
   well-formed (e.\,g. all de-Bruijn indices occur within the corresponding scopes) and, in particular,
-  correctly typed. There are also corresponding types representing Isabelle/Pure \<open>types\<close> and \<open>certified types\<close>.
+  correctly typed. There are also corresponding types representing Isabelle/Pure \<open>types\<close> (\<^ML_type>\<open>typ\<close>) and
+  \<open>certified types\<close> (\<^ML_type>\<open>ctyp\<close>).
 
   \<^bigskip>
 
   \marginsymbol
   \<^ML_text>\<open>datatype typ =
-    Type  of string * typ list |
-    TFree of string * sort |
-    TVar  of indexname * sort\<close>\\
+  Type  of string * typ list |
+  TFree of string * sort |
+  TVar  of indexname * sort\<close>\\
   Note that there are also \<open>free\<close> and \<open>schematic\<close> \<open>type variables\<close>. Their use is analogous to that of term variables
   described above.
-
-  \<^bigskip>
-
-  \marginsymbol
-  \<^ML_text>\<open>type\<close> \<^ML_type>\<open>ctyp\<close>
 
   \<^bigskip>
 
@@ -97,8 +94,8 @@ text \<open>
 
   \marginsymbol
   \<^ML_text>\<open>val\<close> \<^ML>\<open>\<^cterm>\<open>term\<close>\<close> : \<^ML_type>\<open>cterm\<close>\\
-  \<^ML_text>\<open>val\<close> \<^ML>\<open>\<^ctyp>\<open>'typ\<close>\<close> : \<^ML_type>\<open>cterm\<close>\\
-  Convenient quotation to parsing and certifying the terms and types in the current context.
+  \<^ML_text>\<open>val\<close> \<^ML>\<open>\<^ctyp>\<open>'typ\<close>\<close> : \<^ML_type>\<open>ctyp\<close>\\
+  Convenient quotations for parsing \<^emph>\<open>and certifying\<close> the terms and types in the current context.
 
   \<^bigskip>
 
@@ -108,14 +105,19 @@ text \<open>
   (\<open>term\<close> : \<^ML_type>\<open>cterm\<close>) :\\
   \<^ML_type>\<open>thm\<close>
   \end{tabular}\\
-  An LCF implementation of the trivial implication inference rule a.k.a the \<open>assumption rule\<close> \<open>A \<Longrightarrow> A\<close>. The term \<open>A\<close> is
-  passed as the parameter \<open>term\<close>. LCF methodology offers an approach for efficient, but highly reliable proof
+  An LCF implementation of the \<^emph>\<open>trivial implication\<close> inference rule a.k.a the \<open>assumption rule\<close> \<open>A \<Longrightarrow> A\<close>.
+  The term \<open>A\<close> is passed as the parameter \<open>term\<close>.
+
+  LCF methodology offers an approach for efficient, but highly reliable proof
   construction, where theorems can only be constructed by using a small number of pre-defined interfaces forming
   so-called \<open>proof kernel\<close> or \<open>logical core\<close>, whose implementation is trusted. Apart from the axioms of the logic
-  (Pure and an object logic such as HOL) and the consistency of definitional extensions, the correctness of all
+  (Pure and an object logic such as HOL) and the consistency of definitional extensions (definition dependency graph
+  should be acyclic), the correctness of all
   proofs in the target object logic (such as HOL) is ensured by the correctness of that small proof kernel. The
   Isabelle's proof kernel is completely contained within just a single ML module \<^ML_structure>\<open>Thm\<close> (implemented
-  in file \<^file>\<open>~~/src/Pure/thm.ML\<close>). The theorems are not simply certified and verified propositions, they also
+  in file \<^file>\<open>~~/src/Pure/thm.ML\<close>).
+
+  The theorems are not simply certified and verified propositions, they also
   contain a certain auxiliary data that enables their efficient manipulation. In particular, the theorem carries
   a number of \<open>hypotheses\<close> forming theorem's own local proof context. This context is necessary for efficient
   composition of theorems. Consider the following situation:
@@ -127,7 +129,7 @@ text \<open>
   \<open>(A \<Longrightarrow> B \<Longrightarrow> C) \<Longrightarrow> (D \<Longrightarrow> E \<Longrightarrow> B) \<Longrightarrow> (A \<Longrightarrow> D \<Longrightarrow> E \<Longrightarrow> C)\<close>? This representation is always not general enough.
   For that reason we switch to a slightly different representation: \<open>A \<turnstile> B \<Longrightarrow> C\<close> and \<open>D \<turnstile> B\<close>. Now we
   only need just \<^emph>\<open>one\<close> inference rule of the form \<open>(A \<Longrightarrow> B) \<Longrightarrow> A \<Longrightarrow> B\<close> to obtain the desired theorem \<open>A, D \<turnstile> C\<close>.
-  The part to the left of the turnstile (\<open>\<turnstile>\<close>) is comprised of the theorem's hypotheses. The hypotheses and be
+  The part to the left of the turnstile (\<open>\<turnstile>\<close>) is comprised of the theorem's hypotheses. The hypotheses are to be
   \<open>introduced\<close> into the theorem as assumptions in arbitrary order to obtain any of the final theorems such as
   \<open>A \<Longrightarrow> D \<Longrightarrow> C\<close> or \<open>D \<Longrightarrow> A \<Longrightarrow> C\<close>. When combining any two theorems using an inference rule, their hypotheses are
   merged (as sets, so that the there are always no repetitions).
@@ -140,8 +142,8 @@ text \<open>
   (\<open>term\<close> : \<^ML_type>\<open>cterm\<close>) :\\
   \<^ML_type>\<open>thm\<close>
   \end{tabular}\\
-  An LCF implementation of an \<open>assumption\<close>, a lifted form of the assumption rule i.\,e. \<open>A \<turnstile> A\<close>, where the assumption
-  \<open>A\<close> (\<open>term\<close>) is lifted into a hypothesis.
+  An LCF implementation of an \<open>assumption\<close>, a lifted form of the \<^emph>\<open>assumption rule\<close> i.\,e. \<open>A \<turnstile> A\<close>,
+  where the assumption \<open>A\<close> (\<open>term\<close>) is lifted into a hypothesis.
 
   \<^bigskip>
 
@@ -149,11 +151,12 @@ text \<open>
   \<^ML_text>\<open>val\<close> \<^ML>\<open>Thm.implies_elim\<close>\\
   \tab\begin{tabular}{ll}
   (\<open>thmAB\<close> : \<^ML_type>\<open>thm\<close>)\\
-  (\<open>thmB\<close> : \<^ML_type>\<open>thm\<close>) :\\
+  (\<open>thmA\<close> : \<^ML_type>\<open>thm\<close>) :\\
   \<^ML_type>\<open>thm\<close>
   \end{tabular}\\
   An LCF implementation of the \<open>implication elimination\<close> rule \<open>(A \<Longrightarrow> B) \<Longrightarrow> A \<Longrightarrow> B\<close>: given the theorems of the
-  form \<open>A \<Longrightarrow> B\<close> (\<open>thmAB\<close>) and \<open>A\<close> (\<open>thmA\<close>), returns the theorem representing proposition \<open>B\<close>. To lift an assumption,
+  form \<open>A \<Longrightarrow> B\<close> (\<open>thmAB\<close>) and \<open>A\<close> (\<open>thmA\<close>), returns the theorem representing the proposition \<open>B\<close>.
+  To lift an assumption,
   say \<open>A\<close>, into a hypothesis, we thus can use a ``code pattern'' \<^ML_text>\<open>Thm.implies_elim thmAB (Thm.assume \<^cterm>\<open>A\<close>)\<close>.
 
   \<^bigskip>
@@ -178,76 +181,84 @@ text \<open>
   propositions of type \<^typ>\<open>prop\<close>.
   This is needed for propositions of the meta-logic, in contrast to the (usually) more common propositions of
   the object logics (such as HOL) that don't need the \<open>PROP\<close> prefix and have type \<open>bool\<close>. Since in this section we
-  only discuss meta logic Pure, we'll always need these \<open>PROP\<close> prefixes.
+  only discuss the meta logic Pure, we'll always need these \<open>PROP\<close> prefixes.
 
   \<^bigskip>
 
   \marginsymbol
-  \<^ML_text>\<open>infix 1 |> |-> |>> ||>\<close>
-  \<^ML_text>\<open>infix 1 #> #-> #>> ##>\<close>
+  \<^ML_text>\<open>infix 1 |> |-> |>> ||>\<close>\\
+  \<^ML_text>\<open>infix 1 #> #-> #>> ##>\<close>\\
   \<^ML_text>\<open>val\<close> \<^ML>\<open>|>\<close>\\
   \tab\begin{tabular}{ll}
   (\<open>x\<close> : \<^ML_type>\<open>'a\<close>)\\
   (\<open>f\<close> : \<^ML_type>\<open>'a -> 'b\<close>) :\\
-  \<^ML_type>\<open>'b\<close> &\<open>= f x\<close>
+  \<^ML_type>\<open>'b\<close> &= \<^ML_text>\<open>f x\<close>
   \end{tabular}\\
   \<^ML_text>\<open>val\<close> \<^ML>\<open>|->\<close>\\
   \tab\begin{tabular}{ll}
   (\<open>x\<close> : \<^ML_type>\<open>'a * 'b\<close>)\\
   (\<open>f\<close> : \<^ML_type>\<open>'a -> 'b -> 'c\<close>) :\\
-  \<^ML_type>\<open>'c\<close> &\<open>= f (fst x) (snd x)\<close>
+  \<^ML_type>\<open>'c\<close> &= \<^ML_text>\<open>f (fst x) (snd x)\<close>
   \end{tabular}\\
   \<^ML_text>\<open>val\<close> \<^ML>\<open>|>>\<close>\\
   \tab\begin{tabular}{ll}
   (\<open>x\<close> : \<^ML_type>\<open>'a * 'b\<close>)\\
-  (\<open>f\<^sub>1\<close> : \<^ML_type>\<open>'a -> 'c\<close>) :\\
-  \<^ML_type>\<open>'c * 'b\<close> &\<open>= (f (fst x), snd x)\<close>
+  (\<open>f\<close> : \<^ML_type>\<open>'a -> 'c\<close>) :\\
+  \<^ML_type>\<open>'c * 'b\<close> &= \<^ML_text>\<open>(f (fst x), snd x)\<close>
   \end{tabular}\\
   \<^ML_text>\<open>val\<close> \<^ML>\<open>||>\<close>\\
   \tab\begin{tabular}{ll}
   (\<open>x\<close> : \<^ML_type>\<open>'a * 'b\<close>)\\
-  (\<open>f\<^sub>2\<close> : \<^ML_type>\<open>'b -> 'c\<close>) :\\
-  \<^ML_type>\<open>'a * 'c\<close> &\<open>= (fst x, f (snd x))\<close>
+  (\<open>f\<close> : \<^ML_type>\<open>'b -> 'c\<close>) :\\
+  \<^ML_type>\<open>'a * 'c\<close> &= \<^ML_text>\<open>(fst x, f (snd x))\<close>
   \end{tabular}\\
   \\
   \<^ML_text>\<open>val\<close> \<^ML>\<open>#>\<close>\\
   \tab\begin{tabular}{ll}
-  (\<open>f\<^sub>1\<close> : \<^ML_type>\<open>'x -> 'a\<close>)\\
-  (\<open>f\<^sub>2\<close> : \<^ML_type>\<open>'a -> 'b\<close>)\\
+  (\<open>f\<close> : \<^ML_type>\<open>'x -> 'a\<close>)\\
+  (\<open>g\<close> : \<^ML_type>\<open>'a -> 'b\<close>)\\
   (\<open>x\<close> : \<^ML_type>\<open>'x\<close>) :\\
-  \<^ML_type>\<open>'b\<close> &\<open>= x |> f\<^sub>1 |> f\<^sub>2\<close>
+  \<^ML_type>\<open>'b\<close> &= \<^ML_text>\<open>x |> f |> g\<close>
   \end{tabular}\\
   \<^ML_text>\<open>val\<close> \<^ML>\<open>#->\<close>\\
   \tab\begin{tabular}{ll}
-  (\<open>f\<^sub>1\<close> : \<^ML_type>\<open>'x -> 'a * 'b\<close>)\\
-  (\<open>f\<^sub>2\<close> : \<^ML_type>\<open>'a -> 'b -> 'c\<close>)\\
+  (\<open>f\<close> : \<^ML_type>\<open>'x -> 'a * 'b\<close>)\\
+  (\<open>g\<close> : \<^ML_type>\<open>'a -> 'b -> 'c\<close>)\\
   (\<open>x\<close> : \<^ML_type>\<open>'x\<close>) :\\
-  \<^ML_type>\<open>'c\<close> &\<open>= x |> f\<^sub>1 |-> f\<^sub>2\<close>
+  \<^ML_type>\<open>'c\<close> &= \<^ML_text>\<open>x |> f |-> g\<close>
   \end{tabular}\\
   \<^ML_text>\<open>val\<close> \<^ML>\<open>#>>\<close>\\
   \tab\begin{tabular}{ll}
-  (\<open>f\<^sub>1\<close> : \<^ML_type>\<open>'x -> 'a * 'b\<close>)\\
-  (\<open>f\<^sub>2\<close> : \<^ML_type>\<open>'a -> 'c\<close>)\\
+  (\<open>f\<close> : \<^ML_type>\<open>'x -> 'a * 'b\<close>)\\
+  (\<open>g\<close> : \<^ML_type>\<open>'a -> 'c\<close>)\\
   (\<open>x\<close> : \<^ML_type>\<open>'x\<close>) :\\
-  \<^ML_type>\<open>'c * 'b\<close> &\<open>= x |> f\<^sub>1 |>> f\<^sub>2\<close>
+  \<^ML_type>\<open>'c * 'b\<close> &= \<^ML_text>\<open>x |> f |>> g\<close>
   \end{tabular}\\
   \<^ML_text>\<open>val\<close> \<^ML>\<open>##>\<close>\\
   \tab\begin{tabular}{ll}
-  (\<open>f\<^sub>1\<close> : \<^ML_type>\<open>'x -> 'a * 'b\<close>)\\
-  (\<open>f\<^sub>2\<close> : \<^ML_type>\<open>'b -> 'c\<close>)\\
+  (\<open>f\<close> : \<^ML_type>\<open>'x -> 'a * 'b\<close>)\\
+  (\<open>g\<close> : \<^ML_type>\<open>'b -> 'c\<close>)\\
   (\<open>x\<close> : \<^ML_type>\<open>'x\<close>) :\\
-  \<^ML_type>\<open>'a * 'c\<close> &\<open>= x |> f\<^sub>1 ||> f\<^sub>2\<close>
+  \<^ML_type>\<open>'a * 'c\<close> &= \<^ML_text>\<open>x |> f ||> g\<close>
   \end{tabular}\\
   Most important Isabelle/ML combinators. Useful for building long chains of consecutive transformations, possibly
   involving some shared state. The shared state is normally carried through the \<^emph>\<open>second\<close> component of a pair. Also,
   there's a convention that the shared state is passed as the \<^emph>\<open>first\<close> parameter of the function if it is only \<^emph>\<open>read\<close>
-  by the function (and is left unmodified), and as the \<^emph>\<open>last\<close> parameter if it is also \<^emph>\<open>written\<close> (and the new state is
+  by the function (and thus left unmodified), and as the \<^emph>\<open>last\<close> parameter if it is also \<^emph>\<open>written\<close>
+  (and the new state is then
   returned as the second component of the returned pair). More combinators can be found in modules
   \<^ML_structure>\<open>Basics\<close> (\<^file>\<open>~~/src/Pure/General/basics.ML\<close>) and
-  \<^ML_structure>\<open>Library\<close> (\<^file>\<open>~~/src/Pure/library.ML\<close>). In particular, there's a combinator \<^ML_text>\<open>||>>\<close> that chains a
-  shared state through two consecutive function applications, while forming a pair of resulting values e.\,g.
-  \<^ML_text>\<open>ctxt |> register f ||>> register x |-> handle_app\<close>, which is equivalent to
-  \<^ML_text>\<open>let val (f, ctxt') = register f ctxt val (x, ctxt'') = register x ctxt' in handle_app (f, x) ctxt'' end\<close>.
+  \<^ML_structure>\<open>Library\<close> (\<^file>\<open>~~/src/Pure/library.ML\<close>).
+
+  In particular, there's a combinator \<^ML_text>\<open>||>>\<close> that chains a
+  shared state through two consecutive function applications, while forming a pair of resulting values e.\,g.\\
+  \<^ML_text>\<open>ctxt |> register f ||>> register x |-> handle_app\<close>,\\ which is equivalent to\\
+  \<^ML_text>\<open>let
+  val (f, ctxt') = register f ctxt
+  val (x, ctxt'') = register x ctxt'
+in
+  handle_app (f, x) ctxt''
+end\<close>.\\
   This is a nice example of those conventions at work. However, Isabelle/ML does not have a full-fledged support for
   monads or algebraic effects and thus this ``poor man's state monad'' remains one of the most important programming
   patterns in Isabelle/ML.
@@ -273,7 +284,7 @@ text \<open>
   (\<open>x\<close> : \<^ML_type>\<open>'a * 'a\<close>) :\\
   \<^ML_type>\<open>'b * 'b\<close> &\<open>(f (fst x), f (snd x))\<close>
   \end{tabular}\\
-  More useful combinators. In particular, \<open>pair\<close> and \<open>rpair\<close> enable supplying an additional state or parameter at some
+  Some more of the useful combinators. In particular, \<open>pair\<close> and \<open>rpair\<close> enable supplying an additional state or parameter at some
   intermediate point in a sequence of (possibly stateful) transformations. E.\,g. we can rewrite an expression
   \<^ML>\<open>Thm.implies_elim (Thm.assume \<^cprop>\<open>PROP A \<Longrightarrow> PROP B\<close>) (Thm.assume \<^cprop>\<open>PROP A\<close>)\<close> is a more sequential
   fashion as
@@ -494,55 +505,96 @@ text \<open>
   the modules \<^ML_structure>\<open>Thm\<close> (\<^file>\<open>~~/src/Pure/thm.ML\<close>) and \<^ML_structure>\<open>Drule\<close> (\<^file>\<open>~~/src/Pure/drule.ML\<close>)
 \<close>
 
+subsection \<open>Problems\<close>
 
-  \<comment>\<open>Prove the representation of the double negation rule within meta-logic. Note that Pure
-    is higher order intuitionistic propositional logic, so it doesn't assume axiom of choice and
-    does not even define the negation symbol. So the axiom of choice should be expressed
-    explicitly as a premise and an implication @{text \<open>A \<Longrightarrow> False\<close>} should be used in place of
-    negation.\<close>
+text \<open>
+  \<^enum> Come up with an approach to represent negation in a pure intuitionistic propositional logic such as Pure. Note that
+    the logic's signature itself only contains the symbols \<open>\<Longrightarrow>\<close>, \<open>\<And>\<close> and \<open>\<equiv>\<close> (i.\,e. no disjunction or negation).
+  \<^enum> Come up with an approach to represent disjunction in the same logic Pure.\\
+    \<^bold>\<open>Hint\<close>: you can look up the
+    definitions of constants \<open>\<not>\<close> and \<open>\<or>\<close> in the HOL object logic in \<^file>\<open>~~/src/HOL/HOL.thy\<close> to dig up some insightful
+    ideas!
+  \<^enum> Prove the \<^emph>\<open>representation\<close> of the \<^emph>\<open>double negation\<close> rule within meta-logic (the rule itself is\<open>\<not>\<not>A \<equiv> A\<close>).
+    Note that Pure is higher order intuitionistic propositional logic, so it doesn't assume axiom of choice (\<open>A \<or> \<not> A\<close>)
+    and, yet again, does not even define the negation or disjunction symbols.
+    So the axiom of choice should be expressed explicitly as a premise of an implication (i.\,e. we have to prove
+    something along the lines of \<open>\<And> A. A \<or> \<not>A \<Longrightarrow> \<not>\<not>?A \<equiv> ?A\<close>, modulo the representation).
+  \<^enum> Prove a more convenient version of the same theorem of the form
+    \<open>neg \<equiv> \<lambda> a. \<dots> \<Longrightarrow> \<And> A. or A (neg A) \<Longrightarrow> or \<equiv> \<lambda> a b. \<dots> \<Longrightarrow> neg (neg ?A) \<equiv> ?A\<close>, where the definitions of the
+    negation and disjunction symbols are assumed as premises.
 
-declare [[ML_print_depth=100]]
+
+\<^bold>\<open>Hint\<close>: Use special quotation \<^ML_text>\<open>\<^print>\<close> (effectful ``universal'' printing function) for debugging and command\\
+\<^theory_text>\<open>declare [[ML_print_depth=100]]\<close>\\
+to enable more deep printing of Isabelle terms.
+\<close>
+
+subsection \<open>Solutions\<close>
+
+subsubsection \<open>Problem 3 (directly contains solutions of problems 1 and 2)\<close>
 
 ML \<open>
-   infix 1 or
-   val prove_double_negation =
-     let
-       val neg = rpair \<^cterm>\<open>PROP P\<close> #> Drule.mk_implies #> Thm.all \<^context> \<^cterm>\<open>PROP P\<close>
-       val op or =
-          apply2 (rpair \<^cterm>\<open>PROP P\<close> #> Drule.mk_implies) ##>
-          rpair \<^cterm>\<open>PROP P\<close> ##>
-          Drule.mk_implies #>
-          Drule.mk_implies #>
-          Thm.all \<^context> \<^cterm>\<open>PROP P\<close>
-       val excl_mid = Thm.all \<^context> \<^cterm>\<open>PROP Q\<close> (\<^cterm>\<open>PROP Q\<close> or neg \<^cterm>\<open>PROP Q\<close>)
-       val a = \<^cterm>\<open>PROP A\<close>
-       val dbl_neg = neg (neg a)
+  infix 1 or
+  val prove_double_negation =
+    let
+      val neg = rpair \<^cterm>\<open>PROP P\<close> ##> Thm.all \<^context> \<^cterm>\<open>PROP P\<close> #> Drule.mk_implies
+      val op or =
+        apply2 (rpair \<^cterm>\<open>PROP P\<close> #> Drule.mk_implies) ##>
+        rpair \<^cterm>\<open>PROP P\<close> ##>
+        Drule.mk_implies #>
+        Drule.mk_implies #>
+        Thm.all \<^context> \<^cterm>\<open>PROP P\<close>
+      val excl_mid = Thm.all \<^context> \<^cterm>\<open>PROP Q\<close> (\<^cterm>\<open>PROP Q\<close> or neg \<^cterm>\<open>PROP Q\<close>)
+      val a = \<^cterm>\<open>PROP A\<close>
 
-       val a_triv = Thm.trivial a
-       val dbl_neg_inst = Thm.assume dbl_neg |> Thm.forall_elim a
-       val thm =
-         Thm.assume excl_mid |>
-         Thm.forall_elim a |>
-         Thm.forall_elim a |>
-         rpair a_triv |->
-         Thm.implies_elim |>
-         rpair dbl_neg_inst |->
-         Thm.implies_elim |>
-         Thm.implies_intr dbl_neg |>
-         Thm.implies_intr excl_mid |>
-         Drule.generalize ([], ["A"])
-     in
-       (\<^binding>\<open>double_negation\<close>, thm) |>
-       Global_Theory.store_thm #>
-       snd
-     end
+      val elim =
+        excl_mid |>
+        Thm.assume |>
+        Thm.forall_elim a |>
+        Thm.forall_elim a |>
+        rpair (Thm.trivial a) |->
+        Thm.implies_elim |>
+        rpair (a |> neg |> neg) ||>
+        Thm.assume ||>
+        (rpair (a |> neg) ##> Thm.assume #-> Thm.implies_elim #> Thm.forall_elim a #> Thm.implies_intr (a |> neg)) |->
+        Thm.implies_elim |>
+        Thm.implies_intr (a |> neg |> neg)
+      val intro =
+        (a |> neg) |>
+        Thm.assume |>
+        rpair (Thm.assume a) |->
+        Thm.implies_elim |>
+        Thm.implies_intr (a |> neg) |>
+        Thm.implies_intr a
+      val thm =
+        Thm.equal_intr elim intro |>
+        Thm.implies_intr excl_mid |>
+        Drule.generalize ([], ["A"])
+    in
+      (\<^binding>\<open>double_negation\<close>, thm) |>
+      Global_Theory.store_thm #>
+      snd
+    end
+\<close>
 
+setup \<open>prove_double_negation\<close>
+
+abbreviation (output) neg ("\<not> _") where "\<not> Q \<equiv> (PROP Q \<Longrightarrow> (\<And> P. PROP P))"
+
+abbreviation (output) or ("_ \<or> _") where
+  "A \<or> B \<equiv> (\<And> P. \<lbrakk>PROP A \<Longrightarrow> PROP P; PROP B \<Longrightarrow> PROP P\<rbrakk> \<Longrightarrow> PROP P)"
+
+thm double_negation
+
+subsubsection \<open>Problem 4\<close>
+
+ML \<open>
   fun prove_double_negation_eqs thy =
     let
       val or_def = \<^cterm>\<open>or \<equiv> \<lambda> A B. (\<And>P. (PROP A \<Longrightarrow> PROP P) \<Longrightarrow> (PROP B \<Longrightarrow> PROP P) \<Longrightarrow> PROP P)\<close>
-      val neg_def = \<^cterm>\<open>neg \<equiv> \<lambda> A. (\<And>P. PROP A \<Longrightarrow> PROP P)\<close>
+      val neg_def = \<^cterm>\<open>neg \<equiv> \<lambda> A. (PROP A \<Longrightarrow> (\<And> P. PROP P))\<close>
     in
-      Thm.reflexive \<^cterm>\<open>\<lambda> f g. ((\<And> Q. PROP f Q (g Q)) \<Longrightarrow> PROP g (g A) \<Longrightarrow> PROP A)\<close> |>
+      Thm.reflexive \<^cterm>\<open>\<lambda> f g. ((\<And> Q. PROP f Q (g Q)) \<Longrightarrow> PROP g (g A) \<equiv> PROP A)\<close> |>
       rpair (Thm.assume or_def) |->
       Thm.combination |>
       rpair (Thm.assume neg_def) |->
@@ -562,16 +614,8 @@ ML \<open>
    end
 \<close>
 
-setup \<open>prove_double_negation\<close>
-
 setup \<open>prove_double_negation_eqs\<close>
 
-abbreviation (output) neg ("\<not> _") where "\<not> Q \<equiv> (\<And> P. (PROP Q \<Longrightarrow> PROP P))"
-
-abbreviation (output) or ("_ \<or> _") where
-  "A \<or> B \<equiv> (\<And> P. \<lbrakk>PROP A \<Longrightarrow> PROP P; PROP B \<Longrightarrow> PROP P\<rbrakk> \<Longrightarrow> PROP P)"
-
-thm double_negation
 thm double_negation_eqs
 
 (*<*)
