@@ -125,7 +125,7 @@ text\<open>
 
   \marginsymbol
   \<^ML_text>\<open>infix 1 THEN\<close>\\
-  \<^ML_text>\<open>val\<close> \<^ML>\<open>(THEN)\<close>\\
+  \<^ML_text>\<open>val\<close> \<^ML>\<open>THEN\<close>\\
   \tab\begin{tabular}{ll}
   (\<open>tacs\<close> : \<^ML_type>\<open>tactic * tactic\<close>) :\\
   \<^ML_type>\<open>tactic\<close>
@@ -141,7 +141,7 @@ text\<open>
 
   \marginsymbol
   \<^ML_text>\<open>infix 1 THEN'\<close>\\
-  \<^ML_text>\<open>val\<close> \<^ML>\<open>(THEN')\<close>\\
+  \<^ML_text>\<open>val\<close> \<^ML>\<open>THEN'\<close>\\
   \tab\begin{tabular}{ll}
   (\<open>tacs\<close> : \<^ML_type>\<open>(int -> tactic) * (int -> tactic)\<close>)\\
   (\<open>goal\<close> : \<^ML_type>\<open>int\<close>) :\\
@@ -154,7 +154,7 @@ text\<open>
 
   \marginsymbol
   \<^ML_text>\<open>infix 1 THEN_ALL_NEW\<close>\\
-  \<^ML_text>\<open>val\<close> \<^ML>\<open>(THEN_ALL_NEW)\<close>\\
+  \<^ML_text>\<open>val\<close> \<^ML>\<open>THEN_ALL_NEW\<close>\\
   \tab\begin{tabular}{ll}
   (\<open>tacs\<close> : \<^ML_type>\<open>(int -> tactic) * (int -> tactic)\<close>)\\
   (\<open>goal\<close> : \<^ML_type>\<open>int\<close>) :\\
@@ -669,4 +669,6 @@ ML \<open>
 setup \<open>prove_sample2\<close>
 thm sample2
 
+(*<*)
 end
+(*>*)
