@@ -169,7 +169,8 @@ text \<open>
   \<^ML_type>\<open>thm\<close>
   \end{tabular}\\
   An LCF implementation of the \<open>implication introductoin\<close> rule, moving a hypothesis \<open>term\<close> into an assumption. The
-  assumption is added \<^emph>\<open>on the left\<close>. E.\,g.
+  assumption is added \<^emph>\<open>on the left\<close>. The rule works even if the provided \<open>term\<close> is \<^emph>\<open>not\<close> a hypothesis, which is
+  also correct (a spurious irrelevant assumption just weakens the theorem). A typical usage example:
 \<close>
 ML \<open>
   Thm.implies_elim (Thm.assume \<^cprop>\<open>PROP A \<Longrightarrow> PROP B\<close>) (Thm.assume \<^cprop>\<open>PROP A\<close>) |>
@@ -177,7 +178,7 @@ ML \<open>
   Thm.implies_intr \<^cterm>\<open>PROP A \<Longrightarrow> PROP B\<close>
 \<close>
 text \<open>
-  This produces a theorem \<^prop>\<open>(PROP A \<Longrightarrow> PROP B) \<Longrightarrow> PROP A \<Longrightarrow> PROP B\<close>. Note the \<open>PROP A\<close> notation for Pure
+  This produces a theorem \<open>(PROP A \<Longrightarrow> PROP B) \<Longrightarrow> PROP A \<Longrightarrow> PROP B\<close>. Note the \<open>PROP A\<close> notation for Pure
   propositions of type \<^typ>\<open>prop\<close>.
   This is needed for propositions of the meta-logic, in contrast to the (usually) more common propositions of
   the object logics (such as HOL) that don't need the \<open>PROP\<close> prefix and have type \<open>bool\<close>. Since in this section we
@@ -270,25 +271,31 @@ end\<close>.\\
   \tab\begin{tabular}{ll}
   (\<open>a\<close> : \<^ML_type>\<open>'a\<close>)\\
   (\<open>b\<close> : \<^ML_type>\<open>'b\<close>) :\\
-  \<^ML_type>\<open>'a * 'b\<close> &\<open>(a, b)\<close>
+  \<^ML_type>\<open>'a * 'b\<close> &= \<^ML_text>\<open>(a, b)\<close>
   \end{tabular}\\
   \<^ML_text>\<open>val\<close> \<^ML>\<open>rpair\<close>\\
   \tab\begin{tabular}{ll}
   (\<open>a\<close> : \<^ML_type>\<open>'a\<close>)\\
   (\<open>b\<close> : \<^ML_type>\<open>'b\<close>) :\\
-  \<^ML_type>\<open>'b * 'a\<close> &\<open>(b, a)\<close>
+  \<^ML_type>\<open>'b * 'a\<close> &= \<^ML_text>\<open>(b, a)\<close>
   \end{tabular}\\
   \<^ML_text>\<open>val\<close> \<^ML>\<open>apply2\<close>\\
   \tab\begin{tabular}{ll}
   (\<open>f\<close> : \<^ML_type>\<open>'a -> 'b\<close>)\\
   (\<open>x\<close> : \<^ML_type>\<open>'a * 'a\<close>) :\\
-  \<^ML_type>\<open>'b * 'b\<close> &\<open>(f (fst x), f (snd x))\<close>
+  \<^ML_type>\<open>'b * 'b\<close> &= \<^ML_text>\<open>(f (fst x), f (snd x))\<close>
   \end{tabular}\\
   Some more of the useful combinators. In particular, \<open>pair\<close> and \<open>rpair\<close> enable supplying an additional state or parameter at some
-  intermediate point in a sequence of (possibly stateful) transformations. E.\,g. we can rewrite an expression
-  \<^ML>\<open>Thm.implies_elim (Thm.assume \<^cprop>\<open>PROP A \<Longrightarrow> PROP B\<close>) (Thm.assume \<^cprop>\<open>PROP A\<close>)\<close> is a more sequential
-  fashion as
-  \<^ML>\<open>\<^cprop>\<open>PROP A \<Longrightarrow> PROP B\<close> |> Thm.assume |> rpair \<^cprop>\<open>PROP A\<close> ||> Thm.assume |-> Thm.implies_elim\<close>.
+  intermediate point in a sequence of (possibly stateful) transformations. E.\,g. we can rewrite an expression\\
+  \<^ML_text>\<open>Thm.implies_elim
+  (Thm.assume \<^cprop>\<open>PROP A \<Longrightarrow> PROP B\<close>)
+  (Thm.assume \<^cprop>\<open>PROP A\<close>)\<close>\\
+  in a more sequential fashion as\\
+  \<^ML_text>\<open>\<^cprop>\<open>PROP A \<Longrightarrow> PROP B\<close> |>
+Thm.assume |>
+rpair \<^cprop>\<open>PROP A\<close> ||>
+Thm.assume |->
+Thm.implies_elim\<close>.
 
   \<^bigskip>
 
@@ -308,7 +315,7 @@ end\<close>.\\
   to use \<^ML>\<open>Thm.cterm_of\<close> and \<^ML>\<open>Thm.term_of\<close> to certify/uncertify terms back and forth).  \<^ML>\<open>mk_implies\<close> builds a
   meta-implication (\<open>\<Longrightarrow>\<close>), while \<^ML>\<open>Thm.all\<close> builds a meta-quantifier (\<open>\<And>\<close>) by abstracting over the specified term
   \<open>v\<close> occurring inside the term \<open>t\<close>. The newly introduced lambda-body \<open>t\<close> should \<^emph>\<open>not\<close> contain loose bound variables
-  (\<^ML_text>\<open>Bound i\<close>, where \<open>i\<close> is too big, bigger or equal to the number of enclosing lambdas).
+  (\<^ML_text>\<open>Bound i\<close>, where \<open>i\<close> is too big, i.\,e. bigger or equal to the number of enclosing lambdas).
 
   \<^bigskip>
 
@@ -319,7 +326,7 @@ end\<close>.\\
   (\<open>thm\<close> : \<^ML_type>\<open>thm\<close>) :\\
   \<^ML_type>\<open>thm\<close>
   \end{tabular}\\
-  An LCF implementation of (meta-) \<^emph>\<open>quantifier introduction\<close> rule \<open>P a \<Longrightarrow> \<And> a. P a\<close>, where \<open>a\<close> (\<open>v\<close>)
+  An LCF implementation of (meta-) \<^emph>\<open>quantifier introduction\<close> rule \<open>P v \<Longrightarrow> \<And> v. P v\<close>, where \<open>v\<close>
   is a free or schematic \<^emph>\<open>variable\<close>. The variable \<^emph>\<open>must not\<close> occur in the hypotheses of the theorem. Otherwise,
   application of this function
   corresponds to the moment when we explicitly quantify over those ``arbitrary, but fixed'' variables that were
@@ -350,7 +357,10 @@ end\<close>.\\
   (\<open>thm\<close> : \<^ML_type>\<open>thm\<close>) :\\
   \<^ML_type>\<open>thm\<close>
   \end{tabular}\\
-  The ``reverse'' rule for \<^emph>\<open>instantiation\<close> of schematic type and term variables. This function \<^emph>\<open>only\<close> performs the
+  The ``reverse'' rule for \<^emph>\<open>instantiation\<close> of schematic type and term variables. Instantiates type and term variables
+  in the \<^emph>\<open>left-to-right\<close> order of their appearance in the statement of the theorem (actually, in its internal
+  representation). When provided with \<open>NONE\<close>, skips the instantiation of the variable (leaving it as a schematic).
+  This function \<^emph>\<open>only\<close> performs the
   instantiation and \<^emph>\<open>does not\<close> beta, eta or alpha-normalize the theorem i.\,e. \<open>(\<And> A. ?A A) \<Longrightarrow> B\<close> can be instantiated
   with \<open>A\<close> to obtain \<open>(\<And> A. A A) \<Longrightarrow> B\<close>, which is correctly represented internally (due to de Bruijn encoding),
   but is not properly readable. The default Isabelle/ML printer for type \<^ML_type>\<open>thm\<close>, however, \<^emph>\<open>does\<close>
@@ -369,7 +379,7 @@ text \<open>
   \end{tabular}\\
   LFC (meta-) \<^emph>\<open>quantifier instantiation\<close> or (meta-) \<^emph>\<open>forall elimination\<close> rule.
   Instantiates the top-level meta-universal
-  quantifier \<open>\<And>\<close> according to the rule \<open>(\<And> x. P x) \<Longrightarrow> P y\<close> with the term \<open>term\<close>.
+  quantifier \<open>\<And>\<close> according to the rule \<open>(\<And> x. P x) \<Longrightarrow> P y\<close> with the term \<open>y\<close>=\<open>term\<close>.
 
   \<^bigskip>
 
@@ -426,7 +436,7 @@ text \<open>
   \end{tabular}\\
   A designated LCF rule for \<^emph>\<open>combination\<close>: \<open>f \<equiv> g \<Longrightarrow> t \<equiv> u \<Longrightarrow> f t \<equiv> g u\<close>. Despite availability of this rule,
   the transitivity rule is offered as a separate rule for
-  efficiency reasons to avoid higher-order unification when possible (consider \<open>f = g = \<lambda> x. a \<equiv> x\<close>,
+  efficiency reasons to avoid higher-order unification when possible (consider \<open>f = g = (\<lambda> x. a \<equiv> x)\<close>,
   then transitivity is just an instance of combination modulo equality elimination).
 
   \<^bigskip>
@@ -434,7 +444,7 @@ text \<open>
   \marginsymbol
   \<^ML_text>\<open>type\<close> \<^ML_type>\<open>conv\<close> = \<^ML_type>\<open>cterm -> thm\<close>\\
   A type of \<^emph>\<open>converters\<close> i.\,e. functions that return theorems about some \<^emph>\<open>equivalent\<close>
-  transformations of certified terms e.\,g.
+  transformations of certified terms, e.\,g.
   alpha, beta or eta-normalization. The functions normally return
   a theorem of the form \<open>t \<equiv> t'\<close>, where \<open>t'\<close> is the term \<open>t\<close> after the transformation.
 
@@ -448,7 +458,7 @@ text \<open>
   \end{tabular}\\
   A converter for beta-normalization. If \<open>full\<close> is \<^ML>\<open>false\<close>, just performs the reduction of the top-level beta-redex
   (\<open>(\<lambda> x. f x) y \<leadsto> f y\<close>, the term \<^emph>\<open>must be\<close> such a redex). If \<open>full\<close> is \<^ML>\<open>true\<close>, performs \<^emph>\<open>full\<close> beta-normalization,
-  the term \<^emph>\<open>may\<close> already be beta-normal.
+  in this case the term \<^emph>\<open>may\<close> already be beta-normal.
 
   \<^bigskip>
 
@@ -459,8 +469,9 @@ text \<open>
   (\<open>thm\<close> : \<^ML_type>\<open>thm\<close>) :\\
   \<^ML_type>\<open>thm\<close>
   \end{tabular}\\
-  LCF \<^emph>\<open>forward conversion\<close> rule. Essentially, just an equality elimination rule for the theorems \<open>conv thm\<close> and
-  \<open>thm\<close>. Semantically, applies converter to a theorem (e.\,g. normalizes the theorem).
+  LCF \<^emph>\<open>forward conversion\<close> rule. Essentially, just an equality elimination rule for the theorems\\
+  \<open>conv (\<close>\<^ML>\<open>Thm.cprop_of\<close> \<open>thm)\<close> and \<open>thm\<close>. Semantically, applies converter to a theorem
+  (e.\,g. beta-normalizes the statement of the theorem).
 \<close>
 text \<open>
   \<^bigskip>
@@ -473,13 +484,14 @@ text \<open>
   \<^ML_type>\<open>thm\<close>
   \end{tabular}\\
   Lookup previously saved theorem in a theory by name
-  (the eXternal name, therefore \<^ML_type>\<open>xstring\<close> = \<^ML_type>\<open>string\<close>).
+  (the eXternal name, therefore \<^ML_type>\<open>xstring\<close>, which is just an alias of \<^ML_type>\<open>string\<close>).
 
   \<^bigskip>
 
   \marginsymbol
-  \<^ML_text>\<open>@{thm name}\<close> : \<^ML_type>\<open>thm\<close>
-  A convenience quotation to retrieve the theorem by name from the current theory (where the ML code is executed).
+  \<^ML_text>\<open>@{thm name}\<close> : \<^ML_type>\<open>thm\<close>\\
+  A convenience quotation to retrieve the theorem by name from the current theory
+  (where the ML code is being executed).
 
   \<^bigskip>
 
@@ -491,42 +503,46 @@ text \<open>
   \<^ML_type>\<open>thm * theory\<close>
   \end{tabular}\\
   Store the theorem \<open>snd def\<close> in the theory \<open>thy\<close> by name. The name should be supplied with the location of the
-  theorem definition and other technical supplementary information, thus forming a \<^emph>\<open>binding\<close>.
+  theorem definition and other supplementary technical information, thus forming a \<^emph>\<open>binding\<close>.
 
   \<^bigskip>
 
   \marginsymbol
-  \<^ML_text>\<open>\<^binding>\<open>name\<close>\<close> : \<^ML_type>\<open>binding\<close>
+  \<^ML_text>\<open>\<^binding>\<open>name\<close>\<close> : \<^ML_type>\<open>binding\<close>\\
   Returns a binding for a given name with the location information pointing at the location of that quotation itself.
+
+  \<^bigskip>
 
   To modify the current theory, use the command @{command setup} that accepts an update function of type
   \<^ML_type>\<open>theory -> theory\<close>. For more Isabelle/ML interfaces related to LCF and basic theorem manipulation, you can
   also investigate
-  the modules \<^ML_structure>\<open>Thm\<close> (\<^file>\<open>~~/src/Pure/thm.ML\<close>) and \<^ML_structure>\<open>Drule\<close> (\<^file>\<open>~~/src/Pure/drule.ML\<close>)
+  the modules \<^ML_structure>\<open>Thm\<close> (\<^file>\<open>~~/src/Pure/thm.ML\<close> and \<^file>\<open>~~/src/Pure/more_thm.ML\<close>) and
+  \<^ML_structure>\<open>Drule\<close> (\<^file>\<open>~~/src/Pure/drule.ML\<close>)
 \<close>
 
 subsection \<open>Problems\<close>
 
 text \<open>
-  \<^enum> Come up with an approach to represent negation in a pure intuitionistic propositional logic such as Pure. Note that
-    the logic's signature itself only contains the symbols \<open>\<Longrightarrow>\<close>, \<open>\<And>\<close> and \<open>\<equiv>\<close> (i.\,e. no disjunction or negation).
+  \<^enum> Come up with an approach to represent negation (\<open>\<not>\<close>) in a pure intuitionistic propositional logic such as Pure.
+    Note that the logic's signature itself only contains the symbols \<open>\<Longrightarrow>\<close>, \<open>\<And>\<close> and \<open>\<equiv>\<close> (i.\,e.
+    no disjunction or negation).
   \<^enum> Come up with an approach to represent disjunction in the same logic Pure.\\
     \<^bold>\<open>Hint\<close>: you can look up the
     definitions of constants \<open>\<not>\<close> and \<open>\<or>\<close> in the HOL object logic in \<^file>\<open>~~/src/HOL/HOL.thy\<close> to dig up some insightful
     ideas!
-  \<^enum> Prove the \<^emph>\<open>representation\<close> of the \<^emph>\<open>double negation\<close> rule within meta-logic (the rule itself is\<open>\<not>\<not>A \<equiv> A\<close>).
+  \<^enum> Prove the \<^emph>\<open>representation\<close> of the \<^emph>\<open>double negation\<close> rule within meta-logic (the rule itself is \<open>\<not>\<not>A \<equiv> A\<close>).
     Note that Pure is higher order intuitionistic propositional logic, so it doesn't assume axiom of choice (\<open>A \<or> \<not> A\<close>)
     and, yet again, does not even define the negation or disjunction symbols.
     So the axiom of choice should be expressed explicitly as a premise of an implication (i.\,e. we have to prove
     something along the lines of \<open>\<And> A. A \<or> \<not>A \<Longrightarrow> \<not>\<not>?A \<equiv> ?A\<close>, modulo the representation).
-  \<^enum> Prove a more convenient version of the same theorem of the form
-    \<open>neg \<equiv> \<lambda> a. \<dots> \<Longrightarrow> \<And> A. or A (neg A) \<Longrightarrow> or \<equiv> \<lambda> a b. \<dots> \<Longrightarrow> neg (neg ?A) \<equiv> ?A\<close>, where the definitions of the
+  \<^enum> Prove a more convenient version of the same theorem in the form
+    \<open>neg \<equiv> \<lambda> a. \<dots> \<Longrightarrow> or \<equiv> \<lambda> a b. \<dots> \<Longrightarrow> \<And> A. or A (neg A)  \<Longrightarrow> neg (neg ?A) \<equiv> ?A\<close>, where the definitions of the
     negation and disjunction symbols are assumed as premises.
 
 
 \<^bold>\<open>Hint\<close>: Use special quotation \<^ML_text>\<open>\<^print>\<close> (effectful ``universal'' printing function) for debugging and command\\
-\<^theory_text>\<open>declare [[ML_print_depth=100]]\<close>\\
-to enable more deep printing of Isabelle terms.
+\<^theory_text>\<open>declare [[ML_print_depth=n]]\<close>\\
+to enable deeper printing of Isabelle terms.
 \<close>
 
 subsection \<open>Solutions\<close>
