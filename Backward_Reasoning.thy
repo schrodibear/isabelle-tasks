@@ -60,7 +60,7 @@ text \<open>
   \<^ML_text>\<open>type\<close> \<^ML_type>\<open>tactic\<close> = \<^ML_type>\<open>thm -> thm Seq.seq\<close> \\
   The Isabelle/ML type for \<^emph>\<open>tactics\<close> i.\,e. functions non-deterministically transforming the goal state e.\,g.\\
   \<open>B \<Longrightarrow> B\<close> is transformed to \<open>\<top>\<close> by the \<^ML>\<open>assume_tac\<close> or \<open>x \<in> {u} \<Longrightarrow> y \<in> {v} \<Longrightarrow> T\<close> is transformed to either
-  \<open>y \<in> {v} \<Longrightarrow> x = u \<Longrightarrow> T\<close> or \<open>x \<in> {u} \<Longrightarrow> y = v \<Longrightarrow> T\<close> by \<^ML>\<open>eresolve_tac \<^context> [@{thm singletonE}]\<close>. The
+  \<open>y \<in> {v} \<Longrightarrow> x = u \<Longrightarrow> T\<close> or \<open>x \<in> {u} \<Longrightarrow> y = v \<Longrightarrow> T\<close> by \<open>eresolve_tac \<^context> [@{thm singletonE}]\<close>. The
   resulting \<^emph>\<open>lazily computed\<close> sequence contains all possible resulting states emerging from applying the tactic and
   can be potentially infinite.
 
@@ -114,9 +114,9 @@ text\<open>
   Transforms subgoal with index \<open>goal\<close> by resolving its conclusion with the conclusion of one of the theorems
   in the list \<open>thms\<close>. Tries all possible unifiers, then all possible theorems in the list in order. The premises
   of the theorems in \<open>thms\<close> become new subgoals \<^emph>\<open>replacing\<close> the target subgoal. E.\,g.
-  \<^ML>\<open>resolve_tac \<^context> [@{thm UnI1}, @{thm UnI2}]\<close> will transform \<open>x \<in> A \<Longrightarrow> y \<in> B \<Longrightarrow> A \<union> B \<close> to either
+  \<open>resolve_tac \<^context> [@{thm UnI1}, @{thm UnI2}]\<close> will transform \<open>x \<in> A \<Longrightarrow> y \<in> B \<Longrightarrow> A \<union> B \<close> to either
   \<open>x \<in> A \<Longrightarrow> x \<in> B \<Longrightarrow> x \<in> A\<close> or \<open>x \<in> A \<Longrightarrow> x \<in> B \<Longrightarrow> x \<in> B\<close> (in that order).
-  \<^ML>\<open>resolve_tac \<^context> [@{thm IntI}]\<close>, on
+  \<open>resolve_tac \<^context> [@{thm IntI}]\<close>, on
   the other hand, will transform \<open>x \<in> A \<Longrightarrow> x \<in> B \<Longrightarrow> x \<in> A \<inter> B\<close> to
   \<open>x \<in> A \<Longrightarrow> x \<in> B \<Longrightarrow> x \<in> A &&& x \<in> A \<Longrightarrow> x \<in> B \<Longrightarrow> x \<in> B\<close> (two emerging subgoals). The tactic is often used
   in combination with \<^ML>\<open>assume_tac\<close> and the \<^ML>\<open>THEN\<close> combinator.
@@ -133,7 +133,7 @@ text\<open>
   Sequential combination of tactics. Applies two tactics in order, but returns the sequence of all
   possible \<^emph>\<open>successful\<close> applications of the second tactic to one of the resulting states returned by the first one.
   Thus it automatically filters out unsuccessful attempts and provides a mechanism for proof search with backtracking.
-  E.\,g. \<^ML>\<open>HEADGOAL (resolve_tac \<^context> [@{thm UnI1}, @{thm UnI2}]) THEN HEADGOAL (assume_tac \<^context>)\<close> will
+  E.\,g. \<open>HEADGOAL (resolve_tac \<^context> [@{thm UnI1}, @{thm UnI2}]) THEN HEADGOAL (assume_tac \<^context>)\<close> will
   succeed on the subgoal \<open>x \<in> B \<Longrightarrow> x \<in> A \<union> B\<close>, even though the first attempt will result in an intermediate state
   \<open>x \<in> B \<Longrightarrow> x \<in> A\<close>, which cannot be solved by assumption.
 
@@ -250,7 +250,7 @@ text\<open>
   Forward resolution. Try to solve the \<^emph>\<open>major\<close> (first) premise of a theorem in \<open>thms\<close> by assumption,
   then return the subgoals
   for solving other (\<^emph>\<open>minor\<close>) premises and the subgoal with the conclusion of the theorem added as an assumption.
-  E.\,g. given the state \<open>x = y \<Longrightarrow> y = z \<Longrightarrow> C\<close>, forward resolution \<^ML>\<open>forward_tac \<^context> [@{thm trans}]\<close>
+  E.\,g. given the state \<open>x = y \<Longrightarrow> y = z \<Longrightarrow> C\<close>, forward resolution \<open>forward_tac \<^context> [@{thm trans}]\<close>
   (@{thm trans[no_vars]}) will result in
   two subgoals: \<open>x = y \<Longrightarrow> y = z \<Longrightarrow> y = ?t &&& x = y \<Longrightarrow> y = z \<Longrightarrow> x = ?t \<Longrightarrow> C\<close>. Here \<open>?t\<close> is a schematic variable
   and it can be further instantiated to any term e.\,g. by some resolution tactic such as \<^ML>\<open>assume_tac\<close>. Note that
@@ -286,7 +286,7 @@ text\<open>
   first applicable theorem in \<open>thms\<close> is used. The
   occurrences are counted starting from \<open>1\<close>, \<open>0\<close> designated \<^emph>\<open>any\<close> occurrence. The subgoal for the pre-condition \<open>C\<close>
   is posed \<^emph>\<open>before\<close> the substituted initial subgoal \<open>goal\<close>. E.\,g. applying
-  \<^ML>\<open>EqSubst.eqsubst_tac \<^context> [0] [@{thm arg_cong[where f=F]}]\<close> (@{thm arg_cong})
+  \<open>EqSubst.eqsubst_tac \<^context> [0] [@{thm arg_cong[where f=F]}]\<close> (@{thm arg_cong})
   to the subgoal \<open>x = t \<Longrightarrow> P (F x) = P (F t)\<close> will result
   in a state \<open>x = t \<Longrightarrow> ?x = ?y &&& x = t \<Longrightarrow> P (F ?y) = P (F t)\<close>. The instantiation \<open>[where f=F]\<close> can be preformed
   using the function \<^ML>\<open>infer_instantiate'\<close>.

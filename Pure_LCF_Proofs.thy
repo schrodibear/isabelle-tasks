@@ -77,24 +77,24 @@ text \<open>
   \<^bigskip>
 
   \marginsymbol
-  \<^ML_text>\<open>val\<close> \<^ML>\<open>\<^context>\<close> : \<^ML_type>\<open>Proof.context\<close>\\
+  \<^ML_text>\<open>val\<close> \<open>\<^context>\<close> : \<^ML_type>\<open>Proof.context\<close>\\
   Obtains a proof context corresponding to the current theory context at the beginning of the current @{command ML} or
   @{command ML_file} block. The context contains all declarations available at the beginning of the block in the outer
   theory. Very useful with many Isabelle/ML interfaces e.\,g.
-  \<^ML>\<open>Thm.cterm_of \<^context> (Var (("x", 0), Type ("prop", [])))\<close>.
+  \<open>Thm.cterm_of \<^context> (Var (("x", 0), Type ("prop", [])))\<close>.
 
   \<^bigskip>
 
   \marginsymbol
-  \<^ML_text>\<open>val\<close> \<^ML>\<open>\<^term>\<open>term\<close>\<close> : \<^ML_type>\<open>term\<close>\\
-  \<^ML_text>\<open>val\<close> \<^ML>\<open>\<^typ>\<open>'typ\<close>\<close> : \<^ML_type>\<open>typ\<close>\\
-  Convenient quotations for parsing of terms and types in the current context (the one returned by \<^ML>\<open>\<^context>\<close>).
+  \<^ML_text>\<open>val\<close> \<open>\<^term>\<open>term\<close>\<close> : \<^ML_type>\<open>term\<close>\\
+  \<^ML_text>\<open>val\<close> \<open>\<^typ>\<open>'typ\<close>\<close> : \<^ML_type>\<open>typ\<close>\\
+  Convenient quotations for parsing of terms and types in the current context (the one returned by \<open>\<^context>\<close>).
 
   \<^bigskip>
 
   \marginsymbol
-  \<^ML_text>\<open>val\<close> \<^ML>\<open>\<^cterm>\<open>term\<close>\<close> : \<^ML_type>\<open>cterm\<close>\\
-  \<^ML_text>\<open>val\<close> \<^ML>\<open>\<^ctyp>\<open>'typ\<close>\<close> : \<^ML_type>\<open>ctyp\<close>\\
+  \<^ML_text>\<open>val\<close> \<open>\<^cterm>\<open>term\<close>\<close> : \<^ML_type>\<open>cterm\<close>\\
+  \<^ML_text>\<open>val\<close> \<open>\<^ctyp>\<open>'typ\<close>\<close> : \<^ML_type>\<open>ctyp\<close>\\
   Convenient quotations for parsing \<^emph>\<open>and certifying\<close> the terms and types in the current context.
 
   \<^bigskip>
@@ -157,7 +157,7 @@ text \<open>
   An LCF implementation of the \<open>implication elimination\<close> rule \<open>(A \<Longrightarrow> B) \<Longrightarrow> A \<Longrightarrow> B\<close>: given the theorems of the
   form \<open>A \<Longrightarrow> B\<close> (\<open>thmAB\<close>) and \<open>A\<close> (\<open>thmA\<close>), returns the theorem representing the proposition \<open>B\<close>.
   To lift an assumption,
-  say \<open>A\<close>, into a hypothesis, we thus can use a ``code pattern'' \<^ML_text>\<open>Thm.implies_elim thmAB (Thm.assume \<^cterm>\<open>A\<close>)\<close>.
+  say \<open>A\<close>, into a hypothesis, we thus can use a ``code pattern'' \<open>Thm.implies_elim thmAB (Thm.assume \<^cterm>\<open>A\<close>)\<close>.
 
   \<^bigskip>
 
@@ -287,15 +287,17 @@ end\<close>.\\
   \end{tabular}\\
   Some more of the useful combinators. In particular, \<open>pair\<close> and \<open>rpair\<close> enable supplying an additional state or parameter at some
   intermediate point in a sequence of (possibly stateful) transformations. E.\,g. we can rewrite an expression\\
-  \<^ML_text>\<open>Thm.implies_elim
-  (Thm.assume \<^cprop>\<open>PROP A \<Longrightarrow> PROP B\<close>)
-  (Thm.assume \<^cprop>\<open>PROP A\<close>)\<close>\\
-  in a more sequential fashion as\\
-  \<^ML_text>\<open>\<^cprop>\<open>PROP A \<Longrightarrow> PROP B\<close> |>
+  \<open>Thm.implies_elim (Thm.assume \<^cprop>\<open>PROP A \<Longrightarrow> PROP B\<close>) (Thm.assume \<^cprop>\<open>PROP A\<close>)\<close>\\
+  in a more sequential fashion as
+\<close>
+ML \<open>
+\<^cprop>\<open>PROP A \<Longrightarrow> PROP B\<close> |>
 Thm.assume |>
 rpair \<^cprop>\<open>PROP A\<close> ||>
 Thm.assume |->
-Thm.implies_elim\<close>.
+Thm.implies_elim
+\<close>
+text \<open>
 
   \<^bigskip>
 
@@ -508,7 +510,7 @@ text \<open>
   \<^bigskip>
 
   \marginsymbol
-  \<^ML_text>\<open>\<^binding>\<open>name\<close>\<close> : \<^ML_type>\<open>binding\<close>\\
+  \<open>\<^binding>\<open>name\<close>\<close> : \<^ML_type>\<open>binding\<close>\\
   Returns a binding for a given name with the location information pointing at the location of that quotation itself.
 
   \<^bigskip>
