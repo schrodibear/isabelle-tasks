@@ -10,6 +10,95 @@ subsection \<open>Isabelle/ML interfaces\<close>
 
 text \<open>
   \marginsymbol
+  \<^ML_text>\<open>eqtype\<close> \<^ML_type>\<open>Position.T\<close>\\
+  An abstract type for representing \<^emph>\<open>positions\<close> in an arbitrary user input, either located in a file or in an
+  interactive input field. Contains the start line number as well as the start (\<^emph>\<open>inclusive\<close>) and end (\<^emph>\<open>exclusive\<close>)
+  offsets of the input text range (from the \<^emph>\<open>start of the input source\<close>, such as a file).
+  The offsets are counted in \<^emph>\<open>Isabelle symbols\<close> (e.\,g. \<open>a\<close>, \<open>\<Longrightarrow>\<close>, \<open>\<longlonglongrightarrow>\<close>, \<open>\<^sub>\<close>, \<open>\<^context>\<close>\<^footnote>\<open>Yes, \<open>\<^context>\<close> and other
+  \<^emph>\<open>control symbols\<close> of the form \<^verbatim>\<open>\<^something>\<close> are considered \<^emph>\<open>single\<close> Isabelle symbols\<close>
+  the opening/closing cartouche itself etc.) starting from \<open>1\<close>.
+
+  \<^bigskip>
+
+  \marginsymbol
+  \<^ML_text>\<open>type\<close> \<^ML_type>\<open>Position.range\<close> = \<^ML_type>\<open>Position.T * Position.T\<close>\\
+  A type alternatively representing position as a span between the \<^emph>\<open>starts\<close> of two positions
+  \<^emph>\<open>located in the same source\<close> (e.\,g. a file), \<^emph>\<open>excluding\<close> the start of the second position.
+  The difference from \<^ML_type>\<open>Position.T\<close> here is \<^emph>\<open>purely pragmatic\<close>
+  with the function \<^ML>\<open>Position.range_position\<close> being able to convert the range into a position. However, the
+  interfaces are designed under an assumption that \<^ML_type>\<open>Position.T\<close> is used to designate a position of a
+  \<^emph>\<open>single entity\<close>, such as a keyword or a separator that may range multiple Isabelle symbols (e.\,g. \<open>=simp\<Rightarrow>\<close> or \<open>\<^sup>*\<close>
+  comprised from \<open>\<^sup>\<close> and \<open>*\<close>), while \<^ML_type>\<open>Position.range\<close> denotes a fragment of user input consisting from
+  multiple entities (such as tokens).
+
+  \<^bigskip>
+
+  \marginsymbol
+  \<^ML_text>\<open>val\<close> \<^ML>\<open>Position.none\<close> : \<^ML_type>\<open>Position.T\<close>\\
+  \<^ML_text>\<open>val\<close> \<^ML>\<open>Position.no_range\<close> : \<^ML_type>\<open>Position.range\<close>\\
+  Dummy defaults encoding the absence of any position information.
+
+  \<^bigskip>
+
+  \marginsymbol
+  \<^ML_text>\<open>val\<close> \<^ML>\<open>Position.here\<close>\\
+  \tab\begin{tabular}{ll}
+  (\<open>p\<close> : \<^ML_type>\<open>Position.T\<close>) :\\
+  \<^ML_type>\<open>string\<close>
+  \end{tabular}\\
+  An auxiliary function converting position to simple readable user output, mostly for debugging.
+
+  \<^bigskip>
+
+  \marginsymbol
+  \<^ML_text>\<open>val\<close> \<open>\<^here>\<close> : \<^ML_type>\<open>Position.T\<close>\\
+  A convenience quotation returning the position corresponding to the symbol \<open>\<^here>\<close> itself.
+
+  \<^bigskip>
+
+  \marginsymbol
+  \<^ML_text>\<open>type\<close> \<^ML_type>\<open>Input.source\<close>\\
+  An abstract type for representing generic user input with position information. This type is widely used within
+  Isabelle/ML sources to represent strings obtained by user interaction within PIDE framework. This representation
+  provides positions for cross-reference and highly precise syntactic and semantic highlighting.
+
+  \<^bigskip>
+
+  \marginsymbol
+  \<^ML_text>\<open>val\<close> \<^ML>\<open>Input.text_of\<close>\\
+  \tab\begin{tabular}{ll}
+  (\<open>s\<close> : \<^ML_type>\<open>Input.source\<close>) :\\
+  \<^ML_type>\<open>Symbol_Pos.text\<close>
+  \end{tabular}\\
+  \<^ML_text>\<open>val\<close> \<^ML>\<open>Input.pos_of\<close>\\
+  \tab\begin{tabular}{ll}
+  (\<open>s\<close> : \<^ML_type>\<open>Input.source\<close>) :\\
+  \<^ML_type>\<open>Position.T\<close>
+  \end{tabular}\\
+  \<^ML_text>\<open>val\<close> \<^ML>\<open>Input.range_of\<close>\\
+  \tab\begin{tabular}{ll}
+  (\<open>s\<close> : \<^ML_type>\<open>Input.source\<close>) :\\
+  \<^ML_type>\<open>Position.range\<close>
+  \end{tabular}\\
+  Getters that extract the data from the input source. \<^ML>\<open>Input.text_of\<close> returns the actual input string
+  (\<^ML_type>\<open>Symbol_Pos.text\<close> = \<^ML_type>\<open>string\<close>), \<^ML>\<open>Input.pos_of\<close> returns the starting position of the input (the
+  position of the first distinguishable entity/token e.\,g. the first keyword), and
+  \<^ML>\<open>Input.range_of\<close> returns the range occupied by the input string in the source.
+
+  \<^bigskip>
+
+  \marginsymbol
+  \<^ML_text>\<open>val\<close> \<^ML>\<open>Input.string\<close>\\
+  \tab\begin{tabular}{ll}
+  (\<open>s\<close> : \<^ML_type>\<open>string\<close>) :\\
+  \<^ML_type>\<open>Input.source\<close>
+  \end{tabular}\\
+  Constructs user input with \<^emph>\<open>no\<close> position information (position equal to \<^ML>\<open>Position.no_range\<close>).
+\<close>
+text \<open>
+  \<^bigskip>
+
+  \marginsymbol
   \<^ML_text>\<open>datatype mixfix =
   NoSyn |
   Mixfix of Input.source * int list * int * Position.range |
@@ -34,35 +123,39 @@ text \<open>
     new theory by adding a \<^theory_text>\<open>keywords\<close> section in its header. We won't discuss the outer syntax in great detail since
     the corresponding mechanisms and practices are quite common in the realm of functional programming in general and
     have a lot of close analogues in many functional languages other than Isabelle/ML (see OCaml's Angstrom or
-    Haskell's parsec for grasping the general idea). We only mention here that Isabelle/ML's parser combinators operate
+    Haskell's Parsec for grasping the general idea). We only mention here that Isabelle/ML's parser combinators operate
     on \<^emph>\<open>pairs\<close> with the \<^emph>\<open>second\<close> component representing the abstract stream (actually, a list) of tokens with or
     without the corresponding context. \<^emph>\<open>Context-dependant\<close> parsers operate on a pair of a context and a token stream,
-    the stream being the \<^emph>\<open>second\<close> component. Thus the types\\
+    the stream being the \<^emph>\<open>second\<close> component. Hence the types\\
     \<^ML_text>\<open>type 'a parser = T list -> 'a * T list\<close>\\
     and\\
     \<^ML_text>\<open>type 'a context_parser = Context.generic * T list -> 'a * (Context.generic * T list)\<close>.\\
   \<^item> The \<^emph>\<open>inner syntax\<close>, however, is defined by somewhat more Isabelle/specific and less well-known means. The inner
-    syntax definition has 5 separate stages (\<^bold>\<open>!\<close>). Let's briefly describe them:
+    syntax parsing pipeline has 5 (\<^bold>\<open>!\<close>) separate stages. Let's briefly describe them:
     \<^item> \<^emph>\<open>Lexing\<close> stage. At this stage the initial string representing the inner Isabelle logic term and already
       \<^emph>\<open>delimited\<close> by the outer theory syntax is separated into a list of \<^emph>\<open>tokens\<close>. The lexer is mostly
       pre-defined and can \<^emph>\<open>only\<close> be extended \<^emph>\<open>implicitly\<close> by adding so-called \<^emph>\<open>separators\<close> of the \<^emph>\<open>mixfix\<close>
       parsing and printing annotations as well as \<^emph>\<open>constant\<close> names. Those separators are just the tokens corresponding
       to would-be \<^emph>\<open>terminal\<close> symbols of an extensible context-free grammar. There are several pre-defined terminals,
       most importantly, the \<^emph>\<open>identifier\<close> terminal that corresponds to constants and other logical symbols with
-      a fixed interpretation and the \<^emph>\<open>variable\<close>, corresponding to uninterpreted symbols. In general, the means to
+      a fixed interpretation and the \<^emph>\<open>variable\<close> terminal,
+      corresponding to uninterpreted symbols. In general, the means to
       extend the inner lexer available to the Isablle/ML user/expert are defining a new constant name and
-      defining a new mixfix separator.
+      (implicitly) defining a new mixfix separator.
     \<^item> \<^emph>\<open>Parsing\<close> stage. At this stage the readily separated list of tokens (Isabelle inner syntax parser is generally
-      \<^emph>\<open>not\<close> lazy, so it's possible to handle the entire inner logical term or even several closely related terms
-      at once) is transformed into the \<^emph>\<open>untyped AST\<close> defined as follows:\\
+      \<^emph>\<open>not\<close> lazy, so it \<^emph>\<open>is\<close> possible to handle the entire inner logical term or even several closely related terms
+      at once) is transformed into the \<^emph>\<open>untyped AST\<close> defined in \<^ML_structure>\<open>Ast\<close> (\<^file>\<open>~~/src/Pure/Syntax/ast.ML\<close>)
+      as follows:\\
       \<^ML_text>\<open>datatype ast =
   Constant of string |
   Variable of string |
   Appl of ast list\<close>\\
-      This is a very simple initial AST that, however, already distinguishes \<^emph>\<open>constants\<close> and \<^emph>\<open>variables\<close>. The type
-      annotations and binders (particularly, the lambda abstractions) are
-      \<^emph>\<open>not yet separated from terms\<close> and are expressed using special constants \<open>_constrain\<close>, \<open>_abs\<close>,
-      \<open>_sort_constraint\<close> etc. The only externally available way to extend the parser is by defining a mixfix annotation
+      This is a very simple initial AST that, however, already distinguishes \<^emph>\<open>constants\<close> and \<^emph>\<open>variables\<close>. Meanwhile,
+      the type annotations and binders (particularly, the lambda abstractions) are
+      \<^emph>\<open>not yet separated from terms\<close> and are expressed using special constants \<open>_constrain\<close>, \<open>_lambda\<close>, \<open>_abs\<close>,
+      \<open>_sort_constraint\<close> etc.
+
+      The only externally available way to extend the parser is by defining a mixfix annotation
       for a constant symbol (say, \<open>c\<close>), thus extending the \<^emph>\<open>context-free grammar\<close> of the inner syntax with a rule
       for producing an AST construct of the form \<open>Appl [Constant c, \<dots>]\<close>. Mixfix annotations are just special
       restricted shortcuts for encoding of grammar rules. In general, a mixfix annotation is just a triple of
@@ -88,7 +181,7 @@ text \<open>
       Earley parser that is able to produce all possible parsing results (sentences), returned as untyped ASTs,
       for a given sequence of input tokens. Other constructors of the type \<^ML_type>\<open>Syntax_Ext.xsymb\<close>
       represent pretty-printing and formatting annotations and are well described in
-      the Isabelle reference manual.
+      the Isabelle reference manual (Section 8.2.1).
     \<^item> \<^emph>\<open>AST translation\<close> stage. This stage is a rather simple intermediate stage primarily used to define
       more complex syntactic constructs based on the initial simple untyped AST. The most essential aspect of this
       parsing stage is its \<^emph>\<open>untyped\<close> nature. This allows for a free-form transformations of the AST disregarding the
@@ -107,8 +200,11 @@ text \<open>
       produce output AST constructs that can be matched again by the same translations. For that reason Isabelle
       commonly uses a special notion of a \<^emph>\<open>syntatic constant\<close> that is a special helper constant that is \<^emph>\<open>only\<close> used
       in the untyped AST and is then immediately translated into the actual constant, thus ensuring the corresponding
-      translation rule is not applicable anymore. Syntactic constant named usually start with an either an underscore
-      or a special control prefix such as \<open>\<^const>\<close> or \<open>\<^typ>\<close>.
+      translation rule is not applicable anymore. Syntactic constant names usually start with either an underscore
+      or a special control prefix such as \<open>\<^const>\<close> or \<open>\<^typ>\<close>. Some of the syntactic constants are not handled at this
+      stage and survive AST translation
+      up to the next stage (see below), since the general approach to translation there (the application
+      of translations until fixpoint) is similar.
     \<^item> \<^emph>\<open>Term translation\<close> stage. Interestingly, this parsing stage is \<^emph>\<open>also untyped\<close>. However, the AST is already
       represented using the usual general \<^ML_type>\<open>term\<close> datatype of Isabelle/Pure. In particular, type constraints
       are still represented using the special constant \<open>_constraint\<close> and the actual types are replaced with dummy
@@ -126,20 +222,280 @@ text \<open>
       Naturally, the transformations can be very general and expressive.
       These, in particular, include the actual type inference.
       Hence they operate on lists of terms that may share the same \<^emph>\<open>flexible type variables\<close>
-      (as used in the well-known Hindley-Milner type inference algorithm \<open>\<W>\<close>). Our modified ad-hoc overloading
-      implementation is also applied at this stage.
+      (as used in the well-known Hindley-Milner type inference algorithm \<open>\<W>\<close>). Our (PLRDF's)
+      modified ad-hoc overloading implementation is also applied at this stage.
 
+
+  Given the general description given above, we invite the user to refer to the Isabelle manual, sections 8.2.1--8.2.3
+  to identify the meaning of the \<^ML>\<open>Mixfix\<close>, \<^ML>\<open>Infix\<close>, \<^ML>\<open>Infixl\<close>, \<^ML>\<open>Infixr\<close> and \<^ML>\<open>Binder\<close> constructors. We only
+  mention that the position specified in these constructors provides the location ascribed to
+  corresponding extensions of the inner syntax. The last constructor, \<^ML>\<open>Structure\<close>, is slightly deprecated and
+  was used in older historical crude implementation of Isabelle locales by purely syntactic means. However, it is
+  still supported and, in principle,
+  can be used for implicit insertion of context-dependent fixed variables into terms at the parsing
+  stage.
 
   \<^bigskip>
 
   \marginsymbol
-  \<^ML_text>\<open>val\<close> \<^ML>\<open>Thm.cterm_of\<close>\\
+  \<^ML_text>\<open>type\<close> \<^ML_type>\<open>Syntax.mode\<close> = \<^ML_type>\<open>string * bool\<close>\\
+  A type synonym used to denote Isabelle's parsing/prining \<^emph>\<open>modes\<close>. The mechanism of modes allows rather simple support
+  of different output targets, some of which may or may not support Unicode, rendering of special Isabelle symbols etc.
+  A mode is just a pair of a string and a boolean flag. The string identifies a \<^emph>\<open>printing\<close> mode, such as \<^ML>\<open>""\<close> (the
+  default mode), \<^ML>\<open>"ASCII"\<close> (don't use Unicode) or \<^ML>\<open>"internal"\<close> (a notation that is only used locally within a
+  context of just one atomic specification e.\,g. a function definition) and \<^ML>\<open>"input"\<close> (denotes user input and
+  should be never used for printing from Isabelle itself). The flag specifies whether the notation should also be
+  supported (recognized/parsed) in the user input. The notion of a \<^emph>\<open>syntax mode\<close> is used not only during the
+  parsing/pretty-printing per se, but sometimes also during folding/unfolding of certain constants at the
+  checking/typing stage (which may also be considered part of the parsing pipeline). In practice this simply means that
+  the grammar rules used for pretty-printing are stored on per-mode basis and some of the transformations may
+  work differently depending on the current mode. It should be noted here that \<^emph>\<open>even debug output\<close> is Isabelle
+  normally requires the efforts of the entire Isabelle printing pipeline. Hence the current printing mode is \<^emph>\<open>not\<close> part
+  of a normal Isabelle context, but is kept in a separate unsynchronized (thread-unsafe) global variable
+  \<^ML>\<open>print_mode\<close> that can be modified arbitrarily at any moment. The current syntax used for pretty-printing is
+  combined from all the modes enabled by listing in the \<^ML>\<open>print_mode\<close> variable (of type \<^ML_type>\<open>string list\<close>).
+
+  Also, this syntax mode is \<^emph>\<open>not the only\<close> parameter that controls the behavior of Isabelle's printing/parsing
+  pipeline. In particular, there are also separate modes defined in modules \<^ML_structure>\<open>Proof_Context\<close> and
+  \<^ML_structure>\<open>Type\<close> that \<^emph>\<open>are part of the context\<close> and control the behavior of the type inference as well as
+  type and term certification. They, however, don't change the pipeline fundamentally and just cut off certain stages
+  such as expansion of syntactic abbreviations or type propagation through unification.
+
+  \<^bigskip>
+
+  \marginsymbol
+  \<^ML_text>\<open>val\<close> \<^ML>\<open>Syntax.mode_default\<close> : \<^ML_type>\<open>Syntax.mode\<close> = \<^ML>\<open>("", true)\<close>\\
+  \<^ML_text>\<open>val\<close> \<^ML>\<open>Syntax.mode_input\<close> : \<^ML_type>\<open>Syntax.mode\<close> = \<^ML>\<open>(Print_Mode.input, true)\<close>\\
+  Most commonly used syntax modes.
+
+  \<^bigskip>
+
+  \marginsymbol
+  \<^ML_text>\<open>datatype 'a trrule =
+  Parse_Rule of 'a * 'a |
+  Print_Rule of 'a * 'a |
+  Parse_Print_Rule of 'a * 'a\<close>\\
+  A special designated type for simple AST translations (so-called \<^emph>\<open>translation rules\<close> or \<^emph>\<open>tr-rules\<close>). Tr-rules
+  are simply pairs of pattern ASTs such as \<open>_list (_args (x, xs)), Cons (x, _list xs)\<close> or
+  \<open>_list x, Cons (x, Nil)\<close>. Those rules are employed during the AST translation stage and
+  are  applied \<^emph>\<open>until fixpoint\<close> in a \<^emph>\<open>first-fit\<close> manner so that the rule
+  that was registered first is also tried first and immediately applied, if matches. The constants in those rules are
+  usually syntactic and start with an underscore, other identifiers are considered \<^emph>\<open>variables\<close>. A rule is applied
+  by matching one of its sides against the AST (from left to right) and then replacing it with another side of the rule
+  by instantiating its variables with the results of the matching. The rules are often specified using the
+  syntax already provided by the corresponding syntactic constants e.\,g. \<open>[x, xs]\<close> for \<open>_list (_args (x, xs))\<close>
+  (which corresponds to
+  \<open>Ast.Appl [Ast.Constant "_list", Ast.appl [Ast.Constant "args", Ast.Variable "x", Ast.Variable "xs"]]\<close>). Actual
+  non-syntactic constants can also be used in the specification and can escaped using a special construct \<open>CONST\<close>
+  when needed for disambiguation with the variables (e.\,g. \<open>CONST Cons\<close>). The important detail here is that the
+  same rules can in fact be applied \<^emph>\<open>both\<close> for parsing and for printing. Hence the rules fall into three groups:
+  parse rules (denoted by \<^ML>\<open>Syntax.Parse_Rule\<close> and \<open>\<rightharpoonup>\<close> in outer syntax),
+  print rules (\<^ML>\<open>Syntax.Print_Rule\<close>, \<open>\<leftharpoondown>\<close>) and parse/print rules (\<^ML>\<open>Syntax.Parse_Print_Rule\<close>, \<open>\<rightleftharpoons>\<close>).
+
+  \<^bigskip>
+
+  \marginsymbol
+  \<^ML_text>\<open>val\<close> \<^ML>\<open>Syntax.map_trrule\<close>\\
+  \tab\begin{tabular}{ll}
+  (\<open>f\<close> : \<^ML_type>\<open>'a -> 'b\<close>)\\
+  (\<open>rule\<close> : \<^ML_type>\<open>'a Syntax.trrule\<close>) :\\
+  \<^ML_type>\<open>'b Syntax.trrule\<close>\\
+  A convenience function for mapping each component of a tr-rule e.\,g. for parsing it from a pair of strings.
+\<close>
+text \<open>
+  \<^bigskip>
+
+  \marginsymbol
+  \<^ML_text>\<open>val\<close> \<^ML>\<open>Sign.add_syntax\<close>\\
+  \tab\begin{tabular}{ll}
+  (\<open>mode\<close> : \<^ML_type>\<open>Syntax.mode\<close>)\\
+  (\<open>consts\<close> : \<^ML_type>\<open>(string * typ * mixfix) list\<close>)\\
+  (\<open>thy\<close> : \<^ML_type>\<open>theory\<close>) :\\
+  \<^ML_text>\<open>val\<close> \<^ML>\<open>Sign.notation\<close>\\
+  \tab\begin{tabular}{ll}
+  (\<open>add\<close> : \<^ML_type>\<open>bool\<close>)\\
+  (\<open>mode\<close> : \<^ML_type>\<open>Syntax.mode\<close>)\\
+  (\<open>mxs\<close> : \<^ML_type>\<open>(term * mixfix) list\<close>)\\
+  (\<open>thy\<close> : \<^ML_type>\<open>theory\<close>) :\\
+  \<^ML_type>\<open>theory\<close>
+  \end{tabular}\\
+  \<^ML_text>\<open>val\<close> \<^ML>\<open>Sign.add_trrules\<close>\\
+  \tab\begin{tabular}{ll}
+  (\<open>trrules\<close> : \<^ML_type>\<open>Ast.ast Syntax.trrule list\<close>)\\
+  (\<open>thy\<close> : \<^ML_type>\<open>theory\<close>) :\\
+  \<^ML_type>\<open>theory\<close>
+  \end{tabular}\\
+  \<^ML_text>\<open>val\<close> \<^ML>\<open>Sign.parse_ast_translation\<close>\\
+  \tab\begin{tabular}{ll}
+  (\<open>transs\<close> : \<^ML_type>\<open>(string * (Proof.context -> Ast.ast list -> Ast.ast)) list\<close>)\\
+  (\<open>thy\<close> : \<^ML_type>\<open>theory\<close>) :\\
+  \<^ML_type>\<open>theory\<close>
+  \end{tabular}\\
+  \<^ML_text>\<open>val\<close> \<^ML>\<open>Sign.parse_translation\<close>\\
+  \tab\begin{tabular}{ll}
+  (\<open>transs\<close> : \<^ML_type>\<open>(string * (Proof.context -> term list -> term)) list\<close>)\\
+  (\<open>thy\<close> : \<^ML_type>\<open>theory\<close>) :\\
+  \<^ML_type>\<open>theory\<close>
+  \end{tabular}\\
+  \<^ML_text>\<open>val\<close> \<^ML>\<open>Syntax_Phases.term_check\<close>\\
+  \tab\begin{tabular}{ll}
+  (\<open>ord\<close> : \<^ML_type>\<open>int\<close>)\\
+  (\<open>name\<close> : \<^ML_type>\<open>string\<close>)\\
+  (\<open>check\<close> : \<^ML_type>\<open>Proof.context -> term list -> term list\<close>)\\
+  (\<open>context\<close> : \<^ML_type>\<open>Context.generic\<close>) :\\
+  \<^ML_type>\<open>Context.generic\<close>
+  \end{tabular}\\
+  \<^ML_text>\<open>val\<close> \<^ML>\<open>Sign.print_ast_translation\<close>\\
+  \tab\begin{tabular}{ll}
+  (\<open>transs\<close> : \<^ML_type>\<open>(string * (Proof.context -> Ast.ast list -> Ast.ast)) list\<close>)\\
+  (\<open>thy\<close> : \<^ML_type>\<open>theory\<close>) :\\
+  \<^ML_type>\<open>theory\<close>
+  \end{tabular}\\
+  \<^ML_text>\<open>val\<close> \<^ML>\<open>Sign.print_translation\<close>\\
+  \tab\begin{tabular}{ll}
+  (\<open>transs\<close> : \<^ML_type>\<open>(string * (Proof.context -> term list -> term)) list\<close>)\\
+  (\<open>thy\<close> : \<^ML_type>\<open>theory\<close>) :\\
+  \<^ML_type>\<open>theory\<close>
+  \end{tabular}\\
+  \<^ML_text>\<open>val\<close> \<^ML>\<open>Sign.typed_print_translation\<close>\\
+  \tab\begin{tabular}{ll}
+  (\<open>transs\<close> : \<^ML_type>\<open>(string * (Proof.context -> typ -> term list -> term)) list\<close>)\\
+  (\<open>thy\<close> : \<^ML_type>\<open>theory\<close>) :\\
+  \<^ML_type>\<open>theory\<close>
+  \end{tabular}\\
+  \<^ML_text>\<open>val\<close> \<^ML>\<open>Syntax_Phases.term_uncheck\<close>\\
+  \tab\begin{tabular}{ll}
+  (\<open>ord\<close> : \<^ML_type>\<open>int\<close>)\\
+  (\<open>name\<close> : \<^ML_type>\<open>string\<close>)\\
+  (\<open>check\<close> : \<^ML_type>\<open>Proof.context -> term list -> term list\<close>)\\
+  (\<open>context\<close> : \<^ML_type>\<open>Context.generic\<close>) :\\
+  \<^ML_type>\<open>Context.generic\<close>
+  \end{tabular}\\
+  The main Isabelle/ML interfaces of the parsing/printing pipeline (on a global theory level). The semantics of
+  the interfaces should be more or less intuitive based on the general description given above. Here
+  it only worth noting the peculiar relationship between the syntax and typing in the \<^ML>\<open>Sign.add_syntax\<close> interface and
+  some elaboration about the \<^ML>\<open>Sign.typed_print_translation\<close>. The mixfix annotations specified in \<^ML>\<open>Sign.add_syntax\<close>
+  only define the \<^emph>\<open>priorities\<close> \<open>p\<close> of the corresponding grammar rules. However, to fully determine the rules we
+  need the full non-terminals represented by pairs \<open>nonterm\<^bsup>(p)\<^esup>\<close>. The non-terminal (\<open>nonterm\<close>) itself is determined
+  from the \<^emph>\<open>semi-syntactic\<close> type of the constant. This type can include both normal Isabelle types such as
+  \<^typ>\<open>prop\<close>, \<open>'a set\<close>, \<open>int\<close>, \<open>'a \<times> 'b\<close> or \<open>'a + 'b\<close> (the sum type) and so-called \<^emph>\<open>syntactic types\<close> that actually
+  correspond to non-terminals of the inner syntax grammar. Those include \<open>args\<close> for comma-separated lists of
+  arbitrary constructs (both types and terms), \<open>logic\<close> for terms, \<open>type\<close> for types, \<open>pttrn\<close> for binding patterns
+  that can be used within the binding part of the lambda (e.\,g. \<open>\<lambda> (a, b, c). \<dots>\<close> with the tuple pattern in the
+  binding), \<open>any\<close> for both terms and types, among many others. A non-syntactic (``normal'') type specified in the
+  type of a \<^emph>\<open>term\<close> constant will be interpreted as \<open>logic\<close> non-terminal, unless it is a type variable that
+  will be interpreted as \<open>any\<close>. The special case of type variable is justified by the grammar rules of Pure, which
+  do not recognize the type \<^typ>\<open>prop\<close> in all contexts (only at the top level), so if the variable turns out to
+  be instantiated with that type, it has to be parsed differently. The reason for using the special \<open>PROP\<close> construct
+  is the same. This enables slightly more flexibility in defining the syntax of the object logics such as HOL by
+  avoiding some grammar conflicts near the boundaries of the object logic terms, namely the object-level term
+  cannot span over the meta-connectives such as \<open>\<Longrightarrow>\<close>. \<^ML>\<open>Sign.add_syntax\<close> can add syntax for both normal (logic)
+  as well as syntactic constants (that are to be translated later down the pipeline). \<^ML>\<open>Sign.notation\<close> is very
+  similar to \<^ML>\<open>Sign.add_syntax\<close>, albeit it is adapted for adding \<^emph>\<open>or deleting\<close> (according to the
+  \<open>add\<close> parameter) the syntax for already existing
+  constants by automatically translating logic constants (registered in the theory context) into their syntactic
+  counterparts. Internally, both \<^ML>\<open>Sign.add_syntax\<close> and \<^ML>\<open>Sign.notation\<close> use the same interfaces, so no error
+  is expected if \<^ML>\<open>Sign.add_syntax\<close> is misused for adding a notation for existing constant or vise versa. Another
+  notable detail is that the type in \<^ML>\<open>Sign.typed_print_translation\<close> is the type of the \<^emph>\<open>constant\<close>, not the term
+  formed by its application to the arguments. Typed print translations are analogous to the usual print translations,
+  only different in the fact they are applied before the end of the uncheck phase, where types in Isabelle terms
+  can be replaced by dummies.
+
+  \<^bigskip>
+
+  \marginsymbol
+  \<^ML_text>\<open>val\<close> \<^ML>\<open>Syntax_Phases.parse_ast_pattern\<close>\\
   \tab\begin{tabular}{ll}
   (\<open>ctxt\<close> : \<^ML_type>\<open>Proof.context\<close>)\\
-  (\<open>term\<close> : \<^ML_type>\<open>term\<close>) :\\
-  \<^ML_type>\<open>cterm\<close>
+  (\<open>root_ast\<close> : \<^ML_type>\<open>string * string\<close>) :\\
+  \<^ML_type>\<open>Ast.ast\<close>
   \end{tabular}\\
-  Checks and certifies a term \<open>term\<close> to obtain a certified term relative to the context \<open>ctxt\<close>.
+  A convenience function to parse a string into an untyped AST. Primarily intended to be used for parsing tr-rules.
+  The tr-rule is specified as a pair \<open>(root, pat)\<close>, where \<open>root\<close> is the non-terminal to start the parsing (normally,
+  \<open>logic\<close>) and \<open>pat\<close> is the inner syntax to be parsed.
+
+  \<^bigskip>
+
+  \marginsymbol
+  \<^ML_text>\<open>val\<close> \<^ML>\<open>Proof_Context.read_typ_syntax\<close>\\
+  \tab\begin{tabular}{ll}
+  (\<open>ctxt\<close> : \<^ML_type>\<open>Proof.context\<close>)\\
+  (\<open>typ\<close> : \<^ML_type>\<open>string\<close>) :\\
+  \<^ML_type>\<open>typ\<close>
+  \end{tabular}\\
+  A convenience function for reading (parsing) the \<^emph>\<open>semi-syntactic\<close> types used for specifying the type of syntactic
+  constants (particularly, when invoking \<^ML>\<open>Sign.add_syntax\<close>).
+\<close>
+text \<open>
+  \<^bigskip>
+
+  \marginsymbol
+  \<^ML_text>\<open>val\<close> \<^ML>\<open>Sign.declare_const_global\<close>\\
+  \tab\begin{tabular}{ll}
+  (\<open>decl\<close> : \<^ML_type>\<open>(binding * typ) * mixfix\<close>)\\
+  (\<open>thy\<close> : \<^ML_type>\<open>theory\<close>) :\\
+  \<^ML_type>\<open>term * theory\<close>
+  \end{tabular}\\
+  Declares a global \<^emph>\<open>yet uninterpreted\<close> constant. The interpretation is to be \<^emph>\<open>added later\<close> by providing the
+  corresponding axiomatization. Note that definitions are also axioms, notwithstanding the fact their
+  consistency is ensured by the appropriate acyclicity checks as well as the reflexivity and substituativity of
+  equality. The first component of the returned pair is just the term representing the constant (\<^ML_text>\<open>Const c\<close>).
+
+  \<^bigskip>
+
+  \marginsymbol
+  \<^ML_text>\<open>val\<close> \<^ML>\<open>Sign.add_types_global\<close>\\
+  \tab\begin{tabular}{ll}
+  (\<open>decl\<close> : \<^ML_type>\<open>(binding * int * mixfix) list\<close>)\\
+  (\<open>thy\<close> : \<^ML_type>\<open>theory\<close>) :\\
+  \<^ML_type>\<open>term * theory\<close>
+  \end{tabular}\\
+  Declares new \<^emph>\<open>type constructors\<close> with the specified numbers of type arguments. Just as with constants, the types
+  are initially entirely uninterpreted. Note that type constructors can also have syntax, as for instance the
+  pair constructor \<open>'a \<times> 'b\<close> (actually \<open>('a, 'b) prod\<close>) or the sum type constructor \<open>+\<close> (\<open>('a, 'b) sum\<close>).
+
+  \<^bigskip>
+
+  \marginsymbol
+  \<^ML_text>\<open>val\<close> \<^ML>\<open>Global_Theory.add_defs\<close>\\
+  \tab\begin{tabular}{ll}
+  (\<open>overloaded\<close> : \<^ML_type>\<open>bool\<close>)\\
+  (\<open>def\<close> : \<^ML_type>\<open>((binding * term) * attribute list) list\<close>)\\
+  (\<open>thy\<close> : \<^ML_type>\<open>theory\<close>) :\\
+  \<^ML_type>\<open>thm list * theory\<close>
+  \end{tabular}\\
+  Admits definitional axioms in the global theory. The definitions are checked for acyclicity (in the order they
+  previously were or are currently being added to the theory) and thus are
+  guaranteed to be consistent. The \<open>overloaded\<close> parameter enables ad-hoc overloading of a polymorphic constant by
+  providing a definition only for a \<^emph>\<open>particular type instantiation\<close>. The returned theorems correspond to the admitted
+  definitional axioms of the form \<open>b \<equiv> t\<close>, where \<open>b\<close> is the constant (specified in the \<open>binding\<close>) and \<open>t\<close> is the
+  specified RHS term. Attributes are not discussed in this section (see the section on tactical reasoning for some
+  more details).
+
+  \<^bigskip>
+
+  \marginsymbol
+  \<^ML_text>\<open>val\<close> \<^ML>\<open>Thm.no_attributes\<close>\\
+  \tab\begin{tabular}{ll}
+  (\<open>x\<close> : \<^ML_type>\<open>'a\<close>) :\\
+  \<^ML_type>\<open>'a * 'b list\<close> &= \<^ML_text>\<open>(x, [])\<close>
+  \end{tabular}\\
+  A convenient and self-explanatory shortcut for attaching no attributes to some particular argument when using
+  Isabelle/ML interfaces that require them.
+
+  \<^bigskip>
+
+  \color{red}
+  \marginsymbol
+  \normalcolor
+  \<^ML_text>\<open>val\<close> \<^ML>\<open>Thm.add_axiom_global\<close>\\
+  \tab\begin{tabular}{ll}
+  (\<open>ax\<close> : \<^ML_type>\<open>binding * term\<close>)\\
+  (\<open>thy\<close> : \<^ML_type>\<open>theory\<close>) :\\
+  \<^ML_type>\<open>(string * thm) * theory\<close>
+  \end{tabular}\\
+  An interface for adding arbitrary unchecked axioms. Should be used
+
 \<close>
 
 setup \<open>
