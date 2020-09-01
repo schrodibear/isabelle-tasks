@@ -14,8 +14,9 @@ text \<open>
   An abstract type for representing \<^emph>\<open>positions\<close> in an arbitrary user input, either located in a file or in an
   interactive input field. Contains the start line number as well as the start (\<^emph>\<open>inclusive\<close>) and end (\<^emph>\<open>exclusive\<close>)
   offsets of the input text range (from the \<^emph>\<open>start of the input source\<close>, such as a file).
-  The offsets are counted in \<^emph>\<open>Isabelle symbols\<close> (e.\,g. \<open>a\<close>, \<open>\<Longrightarrow>\<close>, \<open>\<longlonglongrightarrow>\<close>, \<open>\<^sub>\<close>, \<open>\<^context>\<close>\<^footnote>\<open>Yes, \<open>\<^context>\<close> and other
-  \<^emph>\<open>control symbols\<close> of the form \<^verbatim>\<open>\<^something>\<close> are considered \<^emph>\<open>single\<close> Isabelle symbols\<close>
+  The offsets are counted in \<^emph>\<open>Isabelle symbols\<close> (e.\,g. \<open>a\<close>, \<open>\<Longrightarrow>\<close>, \<open>\<longlonglongrightarrow>\<close>, \<open>\<^sub>\<close>\<^footnote>\<open>The control symbol denoting the
+  subscript, not properly renderable in \LaTeX.\<close>, \<open>\<^context>\<close>\<^footnote>\<open>Yes, \<open>\<^context>\<close> and other
+  \<^emph>\<open>control symbols\<close> of the form \<^verbatim>\<open>\<^something>\<close> are considered \<^emph>\<open>single\<close> Isabelle symbols.\<close>
   the opening/closing cartouche itself etc.) starting from \<open>1\<close>.
 
   \<^bigskip>
@@ -299,7 +300,8 @@ text \<open>
   \tab\begin{tabular}{ll}
   (\<open>f\<close> : \<^ML_type>\<open>'a -> 'b\<close>)\\
   (\<open>rule\<close> : \<^ML_type>\<open>'a Syntax.trrule\<close>) :\\
-  \<^ML_type>\<open>'b Syntax.trrule\<close>\\
+  \<^ML_type>\<open>'b Syntax.trrule\<close>
+  \end{tabular}\\
   A convenience function for mapping each component of a tr-rule e.\,g. for parsing it from a pair of strings.
 \<close>
 text \<open>
@@ -311,6 +313,8 @@ text \<open>
   (\<open>mode\<close> : \<^ML_type>\<open>Syntax.mode\<close>)\\
   (\<open>consts\<close> : \<^ML_type>\<open>(string * typ * mixfix) list\<close>)\\
   (\<open>thy\<close> : \<^ML_type>\<open>theory\<close>) :\\
+  \<^ML_type>\<open>theory\<close>
+  \end{tabular}\\
   \<^ML_text>\<open>val\<close> \<^ML>\<open>Sign.notation\<close>\\
   \tab\begin{tabular}{ll}
   (\<open>add\<close> : \<^ML_type>\<open>bool\<close>)\\
@@ -485,6 +489,16 @@ text \<open>
 
   \<^bigskip>
 
+  \marginsymbol
+  \<^ML_text>\<open>val\<close> \<^ML>\<open>Thm.simple_fact\<close>\\
+  \tab\begin{tabular}{ll}
+  (\<open>x\<close> : \<^ML_type>\<open>'a\<close>) :\\
+  \<^ML_type>\<open>'a * 'b list\<close> &= \<^ML_text>\<open>[(x, [])]\<close>
+  \end{tabular}\\
+  Another analogous convenient shortcut for singleton lists.
+
+  \<^bigskip>
+
   \color{red}
   \marginsymbol
   \normalcolor
@@ -494,8 +508,29 @@ text \<open>
   (\<open>thy\<close> : \<^ML_type>\<open>theory\<close>) :\\
   \<^ML_type>\<open>(string * thm) * theory\<close>
   \end{tabular}\\
-  An interface for adding arbitrary unchecked axioms. Should be used
+  An interface for adding arbitrary unchecked axioms. Should be used \<^emph>\<open>only in the definitions of object logics\<close> and
+  not in specifications. The soundness (consistency) of the axioms should be proved at least informally, better
+  by relying on some well-known results (such as the consistency of ZF or simply-typed formalization of the set
+  theory). {\color{red}\<^bold>\<open>Don not use this function\<close>} in any ordinary (read just \<^emph>\<open>any\<close> code). Here it is provided only
+  for educatory purposes to understand how object logics (such as HOL) are actually initially defined and bootstrapped.
+  Note that the axioms of Pure are not enough to formalize common mathematics, the usual formalizations rely on
+  the set theory, which is indeed sufficient for most purposes. Same approach is used in HOL, which only adds
+  axioms describing the object-level connectives (\<open>=\<close> and \<open>\<longrightarrow>\<close>),
+  the definite and arbitrary choice operators
+  (\<open>The\<close> and \<open>Eps\<close>), the axiom of choice (\<open>P \<or> \<not> P\<close>), the mathematical induction principle (the injectivity of
+  the successor function as well as the fact \<open>0 \<noteq> 1\<close>), and the description operator of the set theory (\<open>{x | P x}\<close>).
+  Everything else is inferred from these axioms (modulo consistent definitional extensions).
 
+  \<^bigskip>
+
+  \marginsymbol
+  \<^ML_text>\<open>val\<close> \<^ML>\<open>Global_Theory.add_thms\<close>\\
+  \tab\begin{tabular}{ll}
+  (\<open>thms\<close> : \<^ML_type>\<open>((binding * thm) * attribute list) list\<close>)\\
+  (\<open>thy\<close> : \<^ML_type>\<open>theory\<close>) :\\
+  \<^ML_type>\<open>thm list * theory\<close>
+  \end{tabular}\\
+  Registers the theorems in the provided global theory by their names.
 \<close>
 
 setup \<open>
