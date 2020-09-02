@@ -291,7 +291,7 @@ text \<open>
   when needed for disambiguation with the variables (e.\,g. \<open>CONST Cons\<close>). The important detail here is that the
   same rules can in fact be applied \<^emph>\<open>both\<close> for parsing and for printing. Hence the rules fall into three groups:
   parse rules (denoted by \<^ML>\<open>Syntax.Parse_Rule\<close> and \<open>\<rightharpoonup>\<close> in outer syntax),
-  print rules (\<^ML>\<open>Syntax.Print_Rule\<close>, \<open>\<leftharpoondown>\<close>) and parse/print rules (\<^ML>\<open>Syntax.Parse_Print_Rule\<close>, \<open>\<rightleftharpoons>\<close>).
+  print rules (\<^ML>\<open>Syntax.Print_Rule\<close>, \<open>\<leftharpoondown>\<close>) and parse/print rules (\<^ML>\<open>Syntax.Parse_Print_Rule\<close>,~\<open>\<rightleftharpoons>\<close>).
 
   \<^bigskip>
 
@@ -464,17 +464,18 @@ text \<open>
   \<^ML_text>\<open>val\<close> \<^ML>\<open>Global_Theory.add_defs\<close>\\
   \tab\begin{tabular}{ll}
   (\<open>overloaded\<close> : \<^ML_type>\<open>bool\<close>)\\
-  (\<open>def\<close> : \<^ML_type>\<open>((binding * term) * attribute list) list\<close>)\\
+  (\<open>defs\<close> : \<^ML_type>\<open>((binding * term) * attribute list) list\<close>)\\
   (\<open>thy\<close> : \<^ML_type>\<open>theory\<close>) :\\
   \<^ML_type>\<open>thm list * theory\<close>
   \end{tabular}\\
   Admits definitional axioms in the global theory. The definitions are checked for acyclicity (in the order they
   previously were or are currently being added to the theory) and thus are
   guaranteed to be consistent. The \<open>overloaded\<close> parameter enables ad-hoc overloading of a polymorphic constant by
-  providing a definition only for a \<^emph>\<open>particular type instantiation\<close>. The returned theorems correspond to the admitted
-  definitional axioms of the form \<open>b \<equiv> t\<close>, where \<open>b\<close> is the constant (specified in the \<open>binding\<close>) and \<open>t\<close> is the
-  specified RHS term. Attributes are not discussed in this section (see the section on tactical reasoning for some
-  more details).
+  providing a definition only for a \<^emph>\<open>particular type instantiation\<close>. Both the provided definitional axioms
+  (\<open>defs\<close>) and the corresponding returned theorems
+  should of the form \<open>b \<equiv> t\<close>, where \<open>b\<close> is the constant (specified in the \<open>binding\<close>) and \<open>t\<close> is the
+  desired RHS term. Attributes are not discussed in this section (see the section on tactical reasoning for some
+  more details) and are not relevant for basic use of definitions, thus an empty list of attributes often suffices.
 
   \<^bigskip>
 
@@ -493,7 +494,7 @@ text \<open>
   \<^ML_text>\<open>val\<close> \<^ML>\<open>Thm.simple_fact\<close>\\
   \tab\begin{tabular}{ll}
   (\<open>x\<close> : \<^ML_type>\<open>'a\<close>) :\\
-  \<^ML_type>\<open>'a * 'b list\<close> &= \<^ML_text>\<open>[(x, [])]\<close>
+  \<^ML_type>\<open>('a * 'b list) list\<close> &= \<^ML_text>\<open>[(x, [])]\<close>
   \end{tabular}\\
   Another analogous convenient shortcut for singleton lists.
 
@@ -524,6 +525,12 @@ text \<open>
   \<^bigskip>
 
   \marginsymbol
+  \<^ML_text>\<open>val\<close> \<^ML>\<open>Global_Theory.add_thm\<close>\\
+  \tab\begin{tabular}{ll}
+  (\<open>thms\<close> : \<^ML_type>\<open>(binding * thm) * attribute list\<close>)\\
+  (\<open>thy\<close> : \<^ML_type>\<open>theory\<close>) :\\
+  \<^ML_type>\<open>thm * theory\<close>
+  \end{tabular}\\
   \<^ML_text>\<open>val\<close> \<^ML>\<open>Global_Theory.add_thms\<close>\\
   \tab\begin{tabular}{ll}
   (\<open>thms\<close> : \<^ML_type>\<open>((binding * thm) * attribute list) list\<close>)\\
@@ -532,6 +539,64 @@ text \<open>
   \end{tabular}\\
   Registers the theorems in the provided global theory by their names.
 \<close>
+text \<open>
+  \<^bigskip>
+
+  \marginsymbol
+  \<^ML_text>\<open>val\<close> \<^ML>\<open>rewrite_rule\<close>\\
+  \tab\begin{tabular}{ll}
+  (\<open>ctxt\<close> : \<^ML_type>\<open>Proof.context\<close>\\
+  (\<open>rules\<close> : \<^ML_type>\<open>thm list\<close>)\\
+  (\<open>thm\<close> : \<^ML_type>\<open>thm\<close>)\\
+  \<^ML_type>\<open>thm\<close>
+  \end{tabular}\\
+  One of the basic interfaces of the Isabelle \<^emph>\<open>simplifier\<close>. This function is roughly similar to applying the
+  method @{method simp} to a subgoal equal to the provided theorem \<open>thm\<close> and returning the obtained
+  simplified subgoal as the result. This is especially useful for \<^emph>\<open>iterative\<close> forward rewriting of theorem
+  statements as in folding/unfolding of definitions, normalization (e.\,g. modulo associativity and commutativity)
+  or some other equivalent transformations based on rewriting.
+
+  \<^bigskip>
+
+  \marginsymbol
+  \<^ML_text>\<open>val\<close> \<^ML>\<open>apfst\<close>\\
+  \tab\begin{tabular}{ll}
+  (\<open>f\<close> : \<^ML_type>\<open>'a -> 'c\<close>\\
+  (\<open>x\<close> : \<^ML_type>\<open>'a * 'b\<close>) :\\
+  \<^ML_type>\<open>'c * 'b\<close> &= \<^ML_text>\<open>(f (fst x), snd x)\<close>
+  \end{tabular}\\
+  \<^ML_text>\<open>val\<close> \<^ML>\<open>apsnd\<close>\\
+  \tab\begin{tabular}{ll}
+  (\<open>f\<close> : \<^ML_type>\<open>'b -> 'c\<close>\\
+  (\<open>x\<close> : \<^ML_type>\<open>'a * 'b\<close>) :\\
+  \<^ML_type>\<open>'a * 'c\<close> &= \<^ML_text>\<open>(fst x, f (snd x))\<close>
+  \end{tabular}\\
+  Some more convenient standard combinators.
+\<close>
+
+subsection \<open>Problems\<close>
+
+text \<open>
+  \<^enum> Define global constants \<open>\<or>\<close> and \<open>\<not>\<close> formalizing the disjunction and
+    negation of Pure propositions (type \<^typ>\<open>prop\<close>) with the corresponding syntax and \<^emph>\<open>definitional\<close> axiomatization.
+    \<^bold>\<open>Hint\<close>: to come up with the corresponding definitions and appropriate syntax annotations, a look into the
+    fundamental definitions of the HOL theory in \<^file>\<open>~~/src/HOL/HOL.thy\<close> may be helpful.
+  \<^enum> Add the law of excluded middle (\<open>A \<or> \<not> A\<close>) as an axiom using the defined global constants representing
+    disjunction and negation. Prove the rule of double negation (\<open>\<not>\<not>A \<equiv> A\<close>) from the law of excluded middle.
+  \<^enum> Define global abstract type \<open>'a set\<close>, an abstract operation \<open>\<in>\<close> and an abstract operator \<open>{_. _}\<close> (the
+    so-called \<^emph>\<open>set-builder notation\<close>, where Isabelle idiosyncratically prefers the dot over the pipe)
+    with the corresponding syntax.
+  \<^enum> Come up with a minimal axiomatization of the semantics for the membership and set-builder operators. These
+    axioms are in fact sufficient to fully express the entire simply-typed set theory!
+  \<^enum> Add the axiomatic specification of the membership and set-builder operators to the current theory.
+    Prove the set equality criterion \<open>(A \<equiv> B) \<equiv> (\<And>x. x \<in> A \<equiv> x \<in> B)\<close> based on the added axiomatic specification.
+  \<^enum> Add a definition of a global constant \<open>C\<close> representing the set of all constant functions of one argument.
+    Prove the theorem \<open>f \<in> C \<equiv> (\<And>x y. f x \<equiv> f y)\<close>.
+\<close>
+
+subsection \<open>Solutions\<close>
+
+subsubsection \<open>Problem 1\<close>
 
 setup \<open>
    Sign.declare_const_global
@@ -557,43 +622,64 @@ setup \<open>
 \<close>
 
 setup \<open>
-   pair (\<^binding>\<open>neg_def\<close>, \<^term>\<open>\<not> PROP A \<equiv> (\<And>P. PROP A \<Longrightarrow> PROP P)\<close>) #>>
+   pair (\<^binding>\<open>neg_def\<close>, \<^term>\<open>\<not> PROP A \<equiv> (PROP A \<Longrightarrow> (\<And>P. PROP P))\<close>) #>>
    Thm.simple_fact #->
    Global_Theory.add_defs false #>
    snd
 \<close>
 
+subsubsection \<open>Problem 2\<close>
+
 setup \<open>
    Thm.add_axiom_global (\<^binding>\<open>excl_mid\<close>, \<^term>\<open>\<And>P. PROP P \<or> \<not> PROP P\<close>) #>>
    apsnd (Thm.forall_elim \<^cterm>\<open>PROP P\<close> #> Drule.generalize ([], ["P"])) #>>
    apfst (K \<^binding>\<open>excl_mid\<close>) #>>
-   Thm.simple_fact #->
-   Global_Theory.add_thms #>
+   Thm.no_attributes #->
+   Global_Theory.add_thm #>
    snd
 \<close>
 
 ML \<open>
   val prove_double_negation =
-    rewrite_rule \<^context> [@{thm or_def}, @{thm neg_def}] @{thm excl_mid} |>
-    Thm.forall_elim \<^cterm>\<open>PROP A\<close> |>
-    Thm.instantiate' [] [SOME \<^cterm>\<open>PROP A\<close>] |>
-    rpair (Thm.trivial \<^cterm>\<open>PROP A\<close>) |->
-    Thm.implies_elim |>
-    rpair (Thm.assume \<^cterm>\<open>\<not> \<not> PROP A\<close>) ||>
-    rewrite_rule \<^context> [@{thm neg_def}] ||>
-    Thm.forall_elim \<^cterm>\<open>PROP A\<close> |->
-    Thm.implies_elim |>
-    Thm.implies_intr \<^cterm>\<open>\<not> \<not> PROP A\<close> |>
-    Drule.generalize ([], ["A"]) |>
-    pair \<^binding>\<open>double_negation\<close> |>
-    Thm.no_attributes |>
-    Global_Theory.add_thm #>
-    snd
+    let
+      val ltr =
+        @{thm excl_mid} |>
+        Thm.instantiate' [] [SOME \<^cterm>\<open>PROP A\<close>] |>
+        rewrite_rule \<^context> [@{thm or_def}] |>
+        Thm.forall_elim \<^cterm>\<open>PROP A\<close> |>
+        rpair (Thm.trivial \<^cterm>\<open>PROP A\<close>) |->
+        Thm.implies_elim |>
+        rpair (Thm.assume \<^cterm>\<open>\<not> \<not> PROP A\<close>) ||>
+        (rpair (Thm.assume \<^cterm>\<open>\<not> PROP A\<close>) #>
+         apply2 (rewrite_rule \<^context> [@{thm neg_def}]) #->
+         Thm.implies_elim #>
+         Thm.forall_elim \<^cterm>\<open>PROP A\<close> #>
+         Thm.implies_intr \<^cterm>\<open>\<not> PROP A\<close>) |->
+        Thm.implies_elim |>
+        Thm.implies_intr \<^cterm>\<open>\<not> \<not> PROP A\<close>
+       val rtl =
+        Thm.assume \<^cterm>\<open>\<not> PROP A\<close> |>
+        rewrite_rule \<^context> [@{thm neg_def}] |>
+        rpair (Thm.assume \<^cterm>\<open>PROP A\<close>) |->
+        Thm.implies_elim |>
+        Thm.implies_intr \<^cterm>\<open>\<not> PROP A\<close> |>
+        Thm.implies_intr \<^cterm>\<open>PROP A\<close> |>
+        rewrite_rule \<^context> [@{thm neg_def} |> Thm.symmetric]
+    in
+      Thm.equal_intr ltr rtl |>
+      Drule.generalize ([], ["A"]) |>
+      pair \<^binding>\<open>double_negation\<close> |>
+      Thm.no_attributes |>
+      Global_Theory.add_thm #>
+      snd
+    end
 \<close>
 
 setup \<open>prove_double_negation\<close>
 
 thm double_negation
+
+subsubsection \<open>Problem 3\<close>
 
 setup \<open>Sign.add_types_global [(\<^binding>\<open>set\<close>, 1, NoSyn)]\<close>
 
@@ -603,8 +689,6 @@ setup \<open>
      Infix (Input.string "\<in>", 50, Position.no_range)) #>
    snd
 \<close>
-
-print_syntax
 
 setup \<open>
    Sign.declare_const_global
@@ -627,6 +711,8 @@ setup \<open>
       end)
 \<close>
 
+subsubsection \<open>Problem 5 (directly contains solution of problem 4)\<close>
+
 setup \<open>
    Thm.add_axiom_global (\<^binding>\<open>elem\<close>, \<^term>\<open>\<And>S x. x \<in> Collect S \<equiv> S x\<close>) #>>
    apsnd
@@ -634,8 +720,8 @@ setup \<open>
       Thm.forall_elim \<^cterm>\<open>x\<close> #>
       Drule.generalize (["'a"], ["S", "x"])) #>>
    apfst (K \<^binding>\<open>elem\<close>) #>>
-   Thm.simple_fact #->
-   Global_Theory.add_thms #>
+   Thm.no_attributes #->
+   Global_Theory.add_thm #>
    snd
 \<close>
 
@@ -646,8 +732,8 @@ setup \<open>
       Thm.forall_elim \<^cterm>\<open>x :: 'b\<close> #>
       Drule.generalize (["'a"], ["S", "x"])) #>>
    apfst (K \<^binding>\<open>set\<close>) #>>
-   Thm.simple_fact #->
-   Global_Theory.add_thms #>
+   Thm.no_attributes #->
+   Global_Theory.add_thm #>
    snd
 \<close>
 
@@ -668,7 +754,7 @@ ML \<open>
     pair (Thm.assume \<^cterm>\<open>\<And> x. x \<in> A \<equiv> x \<in> B\<close>) ||>
     apfst (Thm.forall_elim \<^cterm>\<open>x\<close> #> Drule.generalize ([], ["x"]) #> single) ||>
     uncurry (rewrite_rule \<^context>) ||>
-    pair @{thm "set"} ||>
+    pair @{thm set} ||>
     apfst (Thm.instantiate' [SOME \<^ctyp>\<open>'a\<close>] [SOME \<^cterm>\<open>B :: 'a set\<close>] #> single) ||>
     uncurry (rewrite_rule \<^context>) ||>
     Thm.implies_intr \<^cterm>\<open>\<And> x. x \<in> A \<equiv> x \<in> B\<close> |->
@@ -683,6 +769,38 @@ ML \<open>
 setup \<open>prove_set_eq_iff\<close>
 
 thm set_eq_iff
+
+subsubsection \<open>Problem 6\<close>
+
+setup \<open>Sign.declare_const_global ((\<^binding>\<open>C\<close>, \<^typ>\<open>('a \<Rightarrow> 'b) set\<close>), NoSyn) #> snd\<close>
+
+setup \<open>
+   pair
+    (\<^binding>\<open>C_def\<close>,
+     \<^term>\<open>C \<equiv> {f. \<And> x y. f x \<equiv> f y}\<close>) #>>
+   Thm.simple_fact #->
+   Global_Theory.add_defs false #>
+   snd
+\<close>
+
+ML \<open>
+  val prove_C_iff =
+    @{thm set_eq_iff} |>
+    Thm.instantiate' [SOME \<^ctyp>\<open>'a \<Rightarrow> 'b\<close>] [SOME \<^cterm>\<open>C\<close>, SOME \<^cterm>\<open>{f. \<And> x y. f x \<equiv> f y}\<close>] |>
+    rpair (@{thm C_def} |> Thm.instantiate' [SOME \<^ctyp>\<open>'a\<close>, SOME \<^ctyp>\<open>'b\<close>] []) |->
+    Thm.equal_elim |>
+    Thm.forall_elim \<^cterm>\<open>f :: 'a \<Rightarrow> 'b\<close> |>
+    rewrite_rule \<^context> [@{thm elem}] |>
+    Drule.generalize (["'a", "'b"], ["f"]) |>
+    pair \<^binding>\<open>C_iff\<close> |>
+    Thm.no_attributes |>
+    Global_Theory.add_thm #>
+    snd
+\<close>
+
+setup \<open>prove_C_iff\<close>
+
+thm C_iff
 
 (*<*)
 end
