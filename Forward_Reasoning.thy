@@ -307,7 +307,7 @@ text \<open>
   (\<open>(r, st)\<close> : \<^ML_type>\<open>thm * thm\<close>) :\\
   \<^ML_type>\<open>thm list\<close>
   \end{tabular}\\
-  Returns the unique result singleton result of\\
+  Returns the unique singleton result of\\
   \<open>Thm.bicompose NONE { flatten=true, match=false, incremented=false } (false, r, 0) 1 st\<close>.
   Raises \<^ML_text>\<open>THM\<close>, if the result is not a singleton.
 
@@ -332,7 +332,7 @@ text \<open>
   (\<open>(r, st)\<close> : \<^ML_type>\<open>thm * thm\<close>) :\\
   \<^ML_type>\<open>thm list\<close>
   \end{tabular}\\
-  Increments indexes of schematic variables in the state \<open>st\<close> by the maximal index of \<open>r\<close>, then returns
+  Increments indexes of schematic variables in the state \<open>st\<close> by the maximal index of \<open>r\<close>, then returns\\
   \<^ML_text>\<open>r COMP st\<close>.
 
   \<^bigskip>
@@ -347,7 +347,7 @@ text \<open>
   \end{tabular}\\
   Iteratively resolves every subgoal of the state \<open>st\<close> (\<^emph>\<open>starting from\<close> \<open>1\<close>) with each corresponding
   rule \<open>r\<^sub>i\<close> from the list \<open>rs\<close> (\<^emph>\<open>left to right\<close>, until there are no more rules to resolve)
-  by calling \<^ML_text>\<open>Thm.biresolution ctxt false\<close> \<open>[(false, r\<^sub>i)]\<close> \<^ML_text>\<open>i st\<^sub>i\<close>. Basically, this
+  by calling\\ \<^ML_text>\<open>Thm.biresolution ctxt false\<close> \<open>[(false, r\<^sub>i)] i st\<^sub>i\<close>. Basically, this
   corresponds to the resolution offered by the standard Isabelle @{attribute OF} attribute (\<open>st [OF rs]\<close>). However,
   \<^ML>\<open>Drule.multi_resolve\<close> handles \<^ML_text>\<open>THM\<close> exceptions (returning an empty sequence) and supports
   multiple alternative results as if the resolution is composed by the \<open>bind\<close> operator of the Haskell's List monad.
@@ -491,7 +491,7 @@ text \<open>
 
   \<^ML_text>\<open>val\<close> \<^ML>\<open>Drule.equal_elim_rule1\<close> : \<^ML_type>\<open>thm\<close>\\
   \<^ML_text>\<open>val\<close> \<^ML>\<open>Drule.equal_elim_rule2\<close> : \<^ML_type>\<open>thm\<close>\\
-  The theorems @{thm equal_elim_rule1} and @{thm equal_elim_rule2} correspondingly.
+  The theorems\\ @{thm equal_elim_rule1} and\\ @{thm equal_elim_rule2}\\ correspondingly.
 \<close>
 
 subsection \<open>Theorems\<close>
@@ -521,14 +521,14 @@ text \<open>
   \<^enum> Write auxiliary functions to substitute the \<open>n\<close>-th occurrence and
     all occurrences of the LHS of an equality in a theorem. Use composition/resolution and the auxiliary
     theorem proved for problem \<open>1\<close> to perform the substitution.
-  \<^enum> Given the following definition:
-\<close>
-definition "w s t \<equiv> SOME x. x \<in> s - t \<or> x \<in> t - s"
-text \<open>
+  \<^enum> Given the following definition:\\
+    \<^theory_text>\<open>definition "w s t \<equiv> SOME x. x \<in> s - t \<or> x \<in> t - s"\<close>\\
     and using the theorems and functions obtained earlier, prove the following statement:\\
     \<open>s \<noteq> t \<Longrightarrow> w s t \<in> s - t \<or> w s t \<in> t - s\<close>.
   \<^enum> Prove the following statement: \<open>x \<in> {1} \<union> {2} \<Longrightarrow> x \<le> 2\<close> using resolution as well as basic LCF inference.
 \<close>
+
+definition "w s t \<equiv> SOME x. x \<in> s - t \<or> x \<in> t - s"
 
 subsection \<open>Solutions\<close>
 
