@@ -191,54 +191,46 @@ text \<open>
   \<^ML_text>\<open>infix 1 #> #-> #>> ##>\<close>\\
   \<^ML_text>\<open>val\<close> \<^ML>\<open>|>\<close>\\
   \tab\begin{tabular}{ll}
-  (\<open>x\<close> : \<^ML_type>\<open>'a\<close>)\\
-  (\<open>f\<close> : \<^ML_type>\<open>'a -> 'b\<close>) :\\
+  (\<open>(x, f)\<close> : \<^ML_type>\<open>'a * ('a -> 'b)\<close>) :\\
   \<^ML_type>\<open>'b\<close> &= \<^ML_text>\<open>f x\<close>
   \end{tabular}\\
   \<^ML_text>\<open>val\<close> \<^ML>\<open>|->\<close>\\
   \tab\begin{tabular}{ll}
-  (\<open>x\<close> : \<^ML_type>\<open>'a * 'b\<close>)\\
-  (\<open>f\<close> : \<^ML_type>\<open>'a -> 'b -> 'c\<close>) :\\
+  (\<open>(x, f)\<close> : \<^ML_type>\<open>('a * 'b) * ('a -> 'b -> 'c)\<close>) :\\
   \<^ML_type>\<open>'c\<close> &= \<^ML_text>\<open>f (fst x) (snd x)\<close>
   \end{tabular}\\
   \<^ML_text>\<open>val\<close> \<^ML>\<open>|>>\<close>\\
   \tab\begin{tabular}{ll}
-  (\<open>x\<close> : \<^ML_type>\<open>'a * 'b\<close>)\\
-  (\<open>f\<close> : \<^ML_type>\<open>'a -> 'c\<close>) :\\
+  (\<open>(x, f)\<close> : \<^ML_type>\<open>('a * 'b) * ('a -> 'c)\<close>) :\\
   \<^ML_type>\<open>'c * 'b\<close> &= \<^ML_text>\<open>(f (fst x), snd x)\<close>
   \end{tabular}\\
   \<^ML_text>\<open>val\<close> \<^ML>\<open>||>\<close>\\
   \tab\begin{tabular}{ll}
-  (\<open>x\<close> : \<^ML_type>\<open>'a * 'b\<close>)\\
-  (\<open>f\<close> : \<^ML_type>\<open>'b -> 'c\<close>) :\\
+  (\<open>(x, f)\<close> : \<^ML_type>\<open>('a * 'b) * ('b -> 'c)\<close>) :\\
   \<^ML_type>\<open>'a * 'c\<close> &= \<^ML_text>\<open>(fst x, f (snd x))\<close>
   \end{tabular}\\
   \\
   \<^ML_text>\<open>val\<close> \<^ML>\<open>#>\<close>\\
   \tab\begin{tabular}{ll}
-  (\<open>f\<close> : \<^ML_type>\<open>'x -> 'a\<close>)\\
-  (\<open>g\<close> : \<^ML_type>\<open>'a -> 'b\<close>)\\
+  (\<open>(f, g)\<close> : \<^ML_type>\<open>('x -> 'a) * ('a -> 'b)\<close>)\\
   (\<open>x\<close> : \<^ML_type>\<open>'x\<close>) :\\
   \<^ML_type>\<open>'b\<close> &= \<^ML_text>\<open>x |> f |> g\<close>
   \end{tabular}\\
   \<^ML_text>\<open>val\<close> \<^ML>\<open>#->\<close>\\
   \tab\begin{tabular}{ll}
-  (\<open>f\<close> : \<^ML_type>\<open>'x -> 'a * 'b\<close>)\\
-  (\<open>g\<close> : \<^ML_type>\<open>'a -> 'b -> 'c\<close>)\\
+  (\<open>(f, g)\<close> : \<^ML_type>\<open>('x -> 'a * 'b) * ('a -> 'b -> 'c)\<close>)\\
   (\<open>x\<close> : \<^ML_type>\<open>'x\<close>) :\\
   \<^ML_type>\<open>'c\<close> &= \<^ML_text>\<open>x |> f |-> g\<close>
   \end{tabular}\\
   \<^ML_text>\<open>val\<close> \<^ML>\<open>#>>\<close>\\
   \tab\begin{tabular}{ll}
-  (\<open>f\<close> : \<^ML_type>\<open>'x -> 'a * 'b\<close>)\\
-  (\<open>g\<close> : \<^ML_type>\<open>'a -> 'c\<close>)\\
+  (\<open>(f, g)\<close> : \<^ML_type>\<open>('x -> 'a * 'b) * ('a -> 'c)\<close>)\\
   (\<open>x\<close> : \<^ML_type>\<open>'x\<close>) :\\
   \<^ML_type>\<open>'c * 'b\<close> &= \<^ML_text>\<open>x |> f |>> g\<close>
   \end{tabular}\\
   \<^ML_text>\<open>val\<close> \<^ML>\<open>##>\<close>\\
   \tab\begin{tabular}{ll}
-  (\<open>f\<close> : \<^ML_type>\<open>'x -> 'a * 'b\<close>)\\
-  (\<open>g\<close> : \<^ML_type>\<open>'b -> 'c\<close>)\\
+  (\<open>(f, g)\<close> : \<^ML_type>\<open>('x -> 'a * 'b) * ('b -> 'c)\<close>)\\
   (\<open>x\<close> : \<^ML_type>\<open>'x\<close>) :\\
   \<^ML_type>\<open>'a * 'c\<close> &= \<^ML_text>\<open>x |> f ||> g\<close>
   \end{tabular}\\
