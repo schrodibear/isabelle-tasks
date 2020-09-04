@@ -277,7 +277,7 @@ text \<open>
 
   \marginsymbol
   \<^ML_text>\<open>infix 0 RLN\<close>\\
-  \<^ML_text>\<open>val\<close> \<^ML>\<open>RS\<close>\\
+  \<^ML_text>\<open>val\<close> \<^ML>\<open>RLN\<close>\\
   \tab\begin{tabular}{ll}
   (\<open>(rs, (i, sts))\<close> : \<^ML_type>\<open>thm list * (int * thm list)\<close>) :\\
   \<^ML_type>\<open>thm list\<close>
@@ -364,7 +364,7 @@ text \<open>
   (\<open>(rs, st)\<close> : \<^ML_type>\<open>thm list * thm\<close>) :\\
   \<^ML_type>\<open>thm list\<close>
   \end{tabular}\\
-  Returns the result of \<^ML_text>\<open>Drule.multi_resolve NONE rs st\<close>, is it is a singleton and raises \<^ML_text>\<open>THM\<close>
+  Returns the result of \<^ML_text>\<open>Drule.multi_resolve NONE rs st\<close>, if it is a singleton and raises \<^ML_text>\<open>THM\<close>
   otherwise.
 
   \<^bigskip>
@@ -499,54 +499,43 @@ subsection \<open>Theorems\<close>
 text \<open>
 \begin{tabular}{rl}
   \<open>eq_reflection\<close>:&    @{thm eq_reflection[no_vars]}\\
-  \<open>someI_ex\<close>:&         @{thm someI_ex}\\
-  \<open>HOL.nnf_simps(5)\<close>:& @{thm HOL.nnf_simps(5)}\\
-  \<open>conj_commute\<close>:&     @{thm conj_commute}\\
-  \<open>Diff_iff\<close>:&         @{thm Diff_iff}\\
-  \<open>set_eq_iff\<close>:&       @{thm set_eq_iff}\\
-  \<open>not_all\<close>:&          @{thm not_all}\\
-  \<open>singleton_iff\<close>:&    @{thm singleton_iff}\\
-  \<open>UnE\<close>:&              @{thm UnE}\\
-  \<open>atomize_not\<close>:&      @{thm atomize_not}\\
-  \<open>not_less\<close>:&         @{thm not_less}
+  \<open>someI_ex\<close>:&         @{thm someI_ex[no_vars]}\\
+  \<open>HOL.nnf_simps(5)\<close>:& @{thm HOL.nnf_simps(5)[no_vars]}\\
+  \<open>conj_commute\<close>:&     @{thm conj_commute[no_vars]}\\
+  \<open>Diff_iff\<close>:&         @{thm Diff_iff[no_vars]}\\
+  \<open>set_eq_iff\<close>:&       @{thm set_eq_iff[no_vars]}\\
+  \<open>not_all\<close>:&          @{thm not_all[no_vars]}\\
+  \<open>singleton_iff\<close>:&    @{thm singleton_iff[no_vars]}\\
+  \<open>UnE\<close>:&              @{thm UnE[no_vars]}\\
+  \<open>atomize_not\<close>:&      @{thm atomize_not[no_vars]}\\
+  \<open>not_less\<close>:&         @{thm not_less[no_vars]}
 \end{tabular}
 \<close>
 
-text \<open>
-Steps:
-  \<^enum> Prove statement \<open>x \<equiv> y \<Longrightarrow> P x \<equiv> P y\<close>
-  \<^enum> Write an auxiliary function to turn HOL (object) equalities to meta-equalities
-  \<^enum> Write an auxiliary functions to substitute n-th occurrence and all accurrences of an equalitiy's LHS in a theorem
-  \<^enum> Using the theorems given above and the definition of \<open>w\<close>, prove the statement:
-    \<open>s \<noteq> t \<Longrightarrow> w s t \<in> s - t \<or> w s t \<in> t - s\<close>
-  \<^enum> Using auxiliary simproc \<open>Lin_Arith.simproc\<close>, prove the following statement:
-    \<open>x \<in> {1} \<union> {2} \<Longrightarrow> x \<le> 2\<close>
-\<close>
+subsection \<open>Problems\<close>
 
+text \<open>
+  \<^enum> Prove the statement \<open>x \<equiv> y \<Longrightarrow> P x \<equiv> P y\<close> using the LCF approach.
+  \<^enum> Implement an auxiliary function to turn HOL (object) equalities (\<open>=\<close>) into meta-equalities \<open>\<equiv>\<close> using the
+    theorem \<open>eq_reflection\<close> (@{thm eq_reflection[no_vars]}) and forward reasoning.
+  \<^enum> Write auxiliary functions to substitute the \<open>n\<close>-th occurrence and
+    all occurrences of the LHS of an equality in a theorem. Use composition/resolution and the auxiliary
+    theorem proved for problem \<open>1\<close> to perform the substitution.
+  \<^enum> Given the following definition:
+\<close>
 definition "w s t \<equiv> SOME x. x \<in> s - t \<or> x \<in> t - s"
-
-text \<open>\<^theory_text>\<open>declare [[unify_trace_failure]]\<close>\<close>
-
 text \<open>
-\<^theory_text>\<open>
-lemma set_neqD:
-  "s \<noteq> t \<Longrightarrow> w s t \<in> s \<and> w s t \<notin> t \<or> w s t \<notin> s \<and> w s t \<in> t"
-proof-
-  assume "s \<noteq> t"
-  then obtain x where "(x \<in> s) \<noteq> (x \<in> t)" unfolding set_eq_iff not_all by (elim exE)
-  hence "x \<in> s \<and> x \<notin> t \<or> x \<notin> s \<and> x \<in> t" unfolding HOL.nnf_simps(5) .
-  hence "x \<in> s \<and> x \<notin> t \<or> x \<in> t \<and> x \<notin> s" by (subst (asm) (2) conj_commute)
-  thus ?thesis unfolding w_def Diff_iff
-    by (subst (8) conj_commute) (erule someI[where P="\<lambda> x.  x \<in> s \<and> x \<notin> t \<or> x \<in> t \<and> x \<notin> s"])
-qed
-\<close>
+    and using the theorems and functions obtained earlier, prove the following statement:\\
+    \<open>s \<noteq> t \<Longrightarrow> w s t \<in> s - t \<or> w s t \<in> t - s\<close>.
+  \<^enum> Prove the following statement: \<open>x \<in> {1} \<union> {2} \<Longrightarrow> x \<le> 2\<close> using resolution as well as basic LCF inference.
 \<close>
 
-lemmas sets = emptyE case_split UnE IntE DiffE singletonE
+subsection \<open>Solutions\<close>
+
+subsubsection \<open>Problem 1\<close>
 
 ML \<open>
-local
-  val cong = \<comment> \<open>Proving \<open>x \<equiv> y \<Longrightarrow> P x \<equiv> P y\<close>\<close>
+  val cong =
     let
       val asm = \<^cprop>\<open>x :: 'a \<equiv> y\<close>
     in
@@ -557,12 +546,24 @@ local
       Thm.implies_intr asm |>
       Drule.generalize (["'a"], ["P", "x", "y"])
     end
-  val meta_eq = try (fn r => r RS @{thm eq_reflection}) |> perhaps \<comment> \<open>Ensure meta equality (\<open>\<equiv>\<close> vs. \<open>=\<close>)\<close>
-  fun subst' ctxt cE n thm = \<comment> \<open>Substitute nth occurrence of cE in thm\<close>
+\<close>
+
+subsubsection \<open>Problem 2\<close>
+
+ML \<open>
+  val meta_eq = try (fn r => r RS @{thm eq_reflection}) |> perhaps
+\<close>
+
+subsubsection \<open>Problem 3\<close>
+
+ML \<open>
+local
+   \<comment> \<open>Substitute \<open>n\<close>-th occurrence of \<open>cE\<close>'s LHS in \<open>thm\<close>\<close>
+  fun subst' ctxt cE n thm =
     let
       fun diff thm' = Thm.eq_thm_prop (thm, thm') |> not
     in
-      Object_Logic.rulify ctxt cE |>
+      cE |>
       meta_eq |>
       single |>
       curry op OF cong |>
@@ -574,9 +575,28 @@ local
       fst |>
       try List.last
     end
+in
   fun subst ctxt cE n = subst' ctxt cE n #> the
   fun subst_all ctxt cE = perhaps_loop (subst' ctxt cE 1) #> the
-in
+end
+\<close>
+
+subsubsection \<open>Problem 4\<close>
+
+experiment begin
+lemma set_neqD:
+  "s \<noteq> t \<Longrightarrow> w s t \<in> s \<and> w s t \<notin> t \<or> w s t \<notin> s \<and> w s t \<in> t"
+proof-
+  assume "s \<noteq> t"
+  then obtain x where "(x \<in> s) \<noteq> (x \<in> t)" unfolding set_eq_iff not_all by (elim exE)
+  hence "x \<in> s \<and> x \<notin> t \<or> x \<notin> s \<and> x \<in> t" unfolding HOL.nnf_simps(5) .
+  hence "x \<in> s \<and> x \<notin> t \<or> x \<in> t \<and> x \<notin> s" by (subst (asm) (2) conj_commute)
+  thus ?thesis unfolding w_def Diff_iff
+    by (subst (8) conj_commute) (erule someI[where P="\<lambda> x.  x \<in> s \<and> x \<notin> t \<or> x \<in> t \<and> x \<notin> s"])
+qed
+end
+
+ML \<open>
   val prove_set_neqD =
     let
       val asm = \<^cprop>\<open>(s :: 'a set) \<noteq> t\<close>
@@ -616,6 +636,15 @@ in
       Global_Theory.store_thm #>
       snd
     end
+\<close>
+
+setup \<open>prove_set_neqD\<close>
+
+thm set_neqD
+
+subsubsection \<open>Problem 5\<close>
+
+ML \<open>
   val prove_sample1 =
     let
       val in_Un = \<^cprop>\<open>x \<in> {1} \<union> {2 :: int}\<close>
@@ -654,13 +683,9 @@ in
       Global_Theory.store_thm #>
       snd
     end
-end
 \<close>
 
-setup \<open>prove_set_neqD\<close>
 setup \<open>prove_sample1\<close>
 
-thm set_neqD
 thm sample1
-
 end
