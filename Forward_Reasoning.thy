@@ -493,7 +493,7 @@ text \<open>
 
   \<^ML_text>\<open>val\<close> \<^ML>\<open>Drule.equal_elim_rule1\<close> : \<^ML_type>\<open>thm\<close>\\
   \<^ML_text>\<open>val\<close> \<^ML>\<open>Drule.equal_elim_rule2\<close> : \<^ML_type>\<open>thm\<close>\\
-  The theorems\\ @{thm equal_elim_rule1[where phi=A and psi=B, no_vars]} and
+  The theorems @{thm equal_elim_rule1[where phi=A and psi=B, no_vars]} and
   @{thm equal_elim_rule2[where phi=A and psi=B, no_vars]} correspondingly.
 \<close>
 
