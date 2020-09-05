@@ -534,7 +534,7 @@ text \<open>
     negation and disjunction symbols are assumed as premises.
 
 
-\<^bold>\<open>Hint\<close>: Use special quotation \<^ML_text>\<open>\<^print>\<close> (effectful ``universal'' printing function) for debugging and command\\
+\<^bold>\<open>Hint\<close>: Use special quotation \<open>\<^print>\<close> (effectful ``universal'' printing function) for debugging and command\\
 \<^theory_text>\<open>declare [[ML_print_depth=n]]\<close>\\
 to enable deeper printing of Isabelle terms.
 \<close>

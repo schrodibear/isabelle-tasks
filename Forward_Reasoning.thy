@@ -136,7 +136,8 @@ text \<open>
   Now let's introduce an Isabelle-specific version of such general operation. It's called \<^emph>\<open>elim-composition\<close> and
   is only different from the general composition in that it imposes an additional constraint on the unifiers \<open>\<theta>\<^sub>k\<close>,
   namely: There should exist an assumption \<open>A\<^sub>j\<close>, \<open>1 \<le> j \<le> m\<close> such that it itself has the form\\
-  \<open>B\<^sub>1 \<Longrightarrow> \<dots> \<Longrightarrow> B\<^sub>l \<Longrightarrow> B\<close>, where \<open>\<theta>\<^sub>kB\<^sub>p \<equiv> B\<close> for some \<open>1 \<le> p \<le> l\<close>. Intuitively it means that the assumption
+  \<open>\<And>\<^bold>x. B\<^sub>1 \<^bold>x \<Longrightarrow> \<dots> \<Longrightarrow> B\<^sub>l \<^bold>x \<Longrightarrow> B \<^bold>x\<close>, where \<open>\<theta>\<^sub>k(B\<^sub>p \<^bold>x)\<equiv> \<theta>\<^sub>k(B \<^bold>x)\<close> for some \<open>1 \<le> p \<le> l\<close>.
+  Intuitively it means that the assumption
   is in a certain way trivially equivalent to identical truth modulo some instantiation of schematic variables. This is
   called \<^emph>\<open>proving by assumption\<close> in Isabelle parlance,
   since the assumption momentarily becomes a new subgoal in the resulting proof state and that emerging subgoal is
@@ -157,14 +158,19 @@ text \<open>
   cases, where even though the conclusion is still a single variable \<open>?C\<close>, no additional constraints are needed. This,
   for instance, is the case for the usual case-splitting rule @{thm case_split}. But in these cases an additional
   manual instantiation of the rule is often necessary (as in most of the corresponding applications
-  of the @{method cases} method).
+  of the @{method cases} method). Assumptions in elimination rules can generally also have outer meta-universal
+  quantifiers, so \<open>B\<^bsub>j,1\<^esub> \<Longrightarrow>\<dots>\<Longrightarrow> B\<^bsub>j,l\<^sub>1\<^esub> \<Longrightarrow> ?C\<close> above is actually \<open>\<And> \<^bold>x. B\<^bsub>j,1\<^esub> \<^bold>x \<Longrightarrow>\<dots>\<Longrightarrow> B\<^bsub>j,l\<^sub>1\<^esub> \<^bold>x \<Longrightarrow> ?C \<^bold>x\<close>, where \<open>\<^bold>x\<close>
+  denotes arbitrarily many variables.
 
   Now let's consider the other additional configuration options that finely control the composition. The flag
-  \<open>flatten\<close> is only relevant for elimination rules and simultaneously enables two things:
-  \<^item> Normalization of (meta-) quantifiers in the emerging subgoals \<open>A\<^sub>j\<close> of the form\\
-    \<open>\<theta>B\<^sub>i\<^sub>,\<^sub>1 \<Longrightarrow> \<dots> \<Longrightarrow> \<theta>B\<^sub>i\<^sub>,\<^bsub>l\<^sub>i\<^esub> \<Longrightarrow> \<theta>C\<close> into
-    the prenex normal form;
-  \<^item> Deletion of the \<open>j\<close>-th premise, where \<open>A\<^sub>j\<close> was solved by assumption, from every emerging subgoal \<open>A\<^sub>j\<close>.
+  \<open>flatten\<close> is only relevant for elimination rules or rules with at least one assumption
+  of the form\\ \<open>\<And>\<^bold>x. B\<^sub>1 \<^bold>x \<Longrightarrow> \<dots> \<Longrightarrow> B\<^sub>l \<^bold>x \<Longrightarrow> C \<^bold>x\<close>, where \<open>C\<close> is either a schematic variable or starts with a
+  meta-quantifier~\<open>\<And>\<close>, and it simultaneously enables two things:
+  \<^item> Flattening of (meta-) quantifiers (\<open>\<And>\<close>) in the emerging subgoals \<open>A\<^sub>j\<close> of the form\\
+    \<open>\<And>\<^bold>x. \<theta>B\<^sub>i\<^sub>,\<^sub>1 \<^bold>x \<Longrightarrow> \<dots> \<Longrightarrow> \<theta>B\<^sub>i\<^sub>,\<^bsub>l\<^sub>i\<^esub> \<^bold>x \<Longrightarrow> \<theta>C \<^bold>x\<close> by moving the outer quantifiers of \<open>\<theta>C\<close> outwards,
+    so they span over the whole assumption \<open>A\<^sub>j\<close>;
+  \<^item> Deletion of the \<open>j\<close>-th premise, where \<open>A\<^sub>j\<close> was solved by assumption (only in elimination mode),
+    from every emerging subgoal \<open>A\<^sub>j\<close>.
 
 
   Both of these features are mostly relevant for tactical reasoning that builds upon composition and resolution and
@@ -209,7 +215,7 @@ text \<open>
   a finite sequence of alternative rules). Resolution is a special case of composition. To explain it more clearly,
   let's first introduce a special auxiliary operation called \<^emph>\<open>lifting\<close> of a theorem over a proposition. Let's assume
   we have a theorem  \<open>r\<close> of the form \<open>A\<^sub>1 \<Longrightarrow> \<dots> \<Longrightarrow> A\<^sub>m \<Longrightarrow> C\<close> and a proposition \<open>s\<close> of the form\\
-  \<open>P\<^sub>1 \<Longrightarrow> \<dots> \<Longrightarrow> P\<^sub>n \<Longrightarrow> S'\<close>. Here
+  \<open>\<And>\<^bold>x. P\<^sub>1 \<^bold>x \<Longrightarrow> \<dots> \<Longrightarrow> P\<^sub>n \<^bold>x \<Longrightarrow> S' \<^bold>x\<close>. Here
   the shape of the propositions is understood \<^emph>\<open>literally\<close>, i.\,e. the terms \<open>C\<close> and \<open>S'\<close> \<^emph>\<open>cannot\<close>
   themselves be meta-implications (of the form \<open>A \<Longrightarrow> B\<close>). Now, a new theorem \<open>r'\<close> is obtained from the theorem \<open>r\<close>
   by \<^emph>\<open>lifting it over\<close> the proposition \<open>s\<close> in the following two steps:
@@ -223,23 +229,24 @@ text \<open>
     (without losing the uniquness after renaming). This is employed during resolution since \<open>s\<close> is usually just
     a part of a larger proposition with potentially larger maximal index.
   \<^item> The \<^emph>\<open>premises\<close> \<open>P\<^sub>1, \<dots>, P\<^sub>n\<close> are introduced as additional \<^emph>\<open>assumptions\<close> to \<^emph>\<open>every assumption\<close> of the theorem \<open>r\<close>
-    with renamed variables,
-    resulting in a new theorem\\
-    \<open>(P\<^sub>1\<Longrightarrow>\<dots>\<Longrightarrow>P\<^sub>n\<Longrightarrow>A\<^sub>1)\<Longrightarrow>\<dots>\<Longrightarrow>(P\<^sub>1\<Longrightarrow>\<dots>\<Longrightarrow>P\<^sub>n\<Longrightarrow>A\<^sub>m)\<Longrightarrow>C\<close>\\
+    with renamed variables, resulting in a new theorem\\
+    \<open>(\<And>\<^bold>x. P\<^sub>1 \<^bold>x\<Longrightarrow>\<dots>\<Longrightarrow>P\<^sub>n \<^bold>x\<Longrightarrow>A\<^sub>1)\<Longrightarrow>\<dots>\<Longrightarrow>(\<And>\<^bold>x. P\<^sub>1 \<^bold>x\<Longrightarrow>\<dots>\<Longrightarrow>P\<^sub>n \<^bold>x\<Longrightarrow>A\<^sub>m \<^bold>x)\<Longrightarrow>C\<close>\\
     called the theorem \<open>r\<close> \<^emph>\<open>lifted over\<close> the proposition \<open>s\<close>.
 
 
   Now let's consider a proof state \<open>st\<close> as usually seen in the context of theorem composition:\\
   \<open>S\<^sub>1 \<Longrightarrow> \<dots> \<Longrightarrow> S\<^sub>i \<Longrightarrow> \<dots> \<Longrightarrow> S\<^sub>n \<Longrightarrow> G\<close>.\\
   Let's consider the \<open>i\<close>-th premise of the state usually called its \<open>i\<close>-th \<^emph>\<open>subgoal\<close>. We assume it to be syntactically
-  of the same form as the proposition \<open>s\<close> we just contemplated above: \<open>P\<^sub>1 \<Longrightarrow> \<dots> \<Longrightarrow> P\<^sub>n \<Longrightarrow> S'\<^sub>i\<close>. Now we are almost ready
+  of the same form as the proposition \<open>s\<close> we just contemplated above: \<open>\<And>\<^bold>x. P\<^sub>1 \<^bold>x\<Longrightarrow> \<dots> \<Longrightarrow> P\<^sub>n \<^bold>x\<Longrightarrow> S'\<^sub>i \<^bold>x\<close>.
+  Now we are almost ready
   to precisely specify resolution. However, it has one specific difference from the usual composition that \<^emph>\<open>cannot\<close> be
   achieved through a call to \<^ML>\<open>Thm.bicompose\<close>. Let's pretend we have an additional flag to make \<^ML>\<open>Thm.bicompose\<close> find
-  not the unifiers between \<open>C\<close> and \<open>S\<^sub>i\<close>, but between \<open>C\<close> and \<open>S'\<^sub>i\<close>. Let's also denote the result of lifting
+  not the unifiers between \<open>C\<close> and \<open>S\<^sub>i\<close>, but between \<open>C\<close> and \<open>S'\<^sub>i\<close> (\<open>\<theta>C\<equiv>\<theta>(S'\<^sub>i \<^bold>x)\<close>).
+  Let's also denote the result of lifting
   of a theorem \<open>r\<close> over the \<open>i\<close>-th subgoal of a proof state \<open>st\<close> as \<open>r\<^bsup>st\<^sub>i\<^esup>\<close>. Then the result of the resolution obtained
   by a call to \<^ML_text>\<open>Thm.biresolution ctxt match\<close> \<open>[\<dots>, (f\<^sub>i, r\<^sub>i), \<dots>]\<close> \<^ML_text>\<open>i st\<close> can be informally described as:\\
   \<open>\<dots>\<langle>Thm.bicompose' ctxt {flatten=true, match=match, incremented=true} (f\<^sub>j, r\<^sub>j\<^bsup>st\<^sub>i\<^esup>, m\<^sub>j) i st\<rangle>\<dots>\<close>.\\
-  Here \<open>Thm.bicompose'\<close> is that modified function that looks for \<open>\<theta>\<close>s such that \<open>\<theta>C\<equiv>\<theta>S'\<^sub>i\<close>, \<open>m\<^sub>j\<close> is the number of
+  Here \<open>Thm.bicompose'\<close> is that modified function that looks for \<open>\<theta>\<close>s such that \<open>\<theta>C\<equiv>\<theta>(S'\<^sub>i \<^bold>x)\<close>, \<open>m\<^sub>j\<close> is the number of
   assumptions of the rule \<open>r\<^sub>j\<close>, and the resulting lazy sequences of results are concatenated in order of their
   occurrence in the original list \<open>rules\<close>. Unfortunately, to avoid inevitable confusion after obtaining unexpected
   results from the vast majority of Isabelle operations, both the internal (available to the ML programmer only) and
