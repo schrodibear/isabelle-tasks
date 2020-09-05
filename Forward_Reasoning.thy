@@ -1,6 +1,8 @@
+(*<*)
 theory Forward_Reasoning
   imports Main
 begin
+(*>*)
 
 section \<open>Forward (elim-) composition and resolution\<close>
 
@@ -491,7 +493,8 @@ text \<open>
 
   \<^ML_text>\<open>val\<close> \<^ML>\<open>Drule.equal_elim_rule1\<close> : \<^ML_type>\<open>thm\<close>\\
   \<^ML_text>\<open>val\<close> \<^ML>\<open>Drule.equal_elim_rule2\<close> : \<^ML_type>\<open>thm\<close>\\
-  The theorems\\ @{thm equal_elim_rule1} and\\ @{thm equal_elim_rule2}\\ correspondingly.
+  The theorems\\ @{thm equal_elim_rule1[where phi=A and psi=B, no_vars]} and
+  @{thm equal_elim_rule2[where phi=A and psi=B, no_vars]} correspondingly.
 \<close>
 
 subsection \<open>Theorems\<close>
@@ -557,28 +560,28 @@ ML \<open>
 subsubsection \<open>Problem 3\<close>
 
 ML \<open>
-local
-   \<comment> \<open>Substitute \<open>n\<close>-th occurrence of \<open>cE\<close>'s LHS in \<open>thm\<close>\<close>
-  fun subst' ctxt cE n thm =
-    let
-      fun diff thm' = Thm.eq_thm_prop (thm, thm') |> not
-    in
-      cE |>
-      meta_eq |>
-      single |>
-      curry op OF cong |>
-      single |>
-      curry op OF Drule.equal_elim_rule1 |>
-      (fn thm' => Drule.multi_resolve (SOME ctxt) [thm] thm') |>
-      Seq.filter diff |>
-      Seq.chop n |>
-      fst |>
-      try List.last
-    end
-in
-  fun subst ctxt cE n = subst' ctxt cE n #> the
-  fun subst_all ctxt cE = perhaps_loop (subst' ctxt cE 1) #> the
-end
+  local
+     \<comment> \<open>Substitute \<open>n\<close>-th occurrence of \<open>cE\<close>'s LHS in \<open>thm\<close>\<close>
+    fun subst' ctxt cE n thm =
+      let
+        fun diff thm' = Thm.eq_thm_prop (thm, thm') |> not
+      in
+        cE |>
+        meta_eq |>
+        single |>
+        curry op OF cong |>
+        single |>
+        curry op OF Drule.equal_elim_rule1 |>
+        (fn thm' => Drule.multi_resolve (SOME ctxt) [thm] thm') |>
+        Seq.filter diff |>
+        Seq.chop n |>
+        fst |>
+        try List.last
+      end
+  in
+    fun subst ctxt cE n = subst' ctxt cE n #> the
+    fun subst_all ctxt cE = perhaps_loop (subst' ctxt cE 1) #> the
+  end
 \<close>
 
 subsubsection \<open>Problem 4\<close>
@@ -688,4 +691,6 @@ ML \<open>
 setup \<open>prove_sample1\<close>
 
 thm sample1
+(*<*)
 end
+(*>*)
