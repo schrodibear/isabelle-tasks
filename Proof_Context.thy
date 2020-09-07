@@ -17,53 +17,50 @@ structure Util = struct
   fun unifiers context (t1, t2) =
     Unify.unifiers (context, Envir.init, [(t1, t2)]) |>
     Seq.map
-      (fst #>
-        (fn Envir.Envir { maxidx, tyenv, tenv } =>
-          Envir.Envir
-            { maxidx = maxidx,
-              tyenv = tyenv,
-              tenv =
-                Vartab.map
-                  (Envir.subst_type tyenv |> apfst ##> Envir.subst_term (tyenv, tenv) |> K)
-                  tenv}) #>
-       `Envir.type_env ##>>
-       `Envir.term_env #>
-       fst #>>
-       (Vartab.dest #> map (fn (xi, (S, T)) => ((xi, S), T))) ##>
-       (Vartab.dest #> map (fn (xi, (T, t)) => ((xi, T), t))) #>>
-       map (Context.cases Thm.global_ctyp_of Thm.ctyp_of context |> apsnd) ##>
-       map (Context.cases Thm.global_cterm_of Thm.cterm_of context |> apsnd))
+      (fn (Envir.Envir { tyenv, tenv, ... }, _) =>
+        (tyenv |>
+         Vartab.dest |>
+         map (fn (xi, (S, T)) => ((xi, S), Context.cases Thm.global_ctyp_of Thm.ctyp_of context T)),
+         tenv |>
+         Vartab.dest |>
+         map
+           (fn (xi, (T, t)) =>
+             ((xi, Envir.subst_type tyenv T),
+              Envir.subst_term (tyenv, tenv) t |> Context.cases Thm.global_cterm_of Thm.cterm_of context))))
   fun r CCOMPN (i, s) =
-    Logic.get_goal (Thm.prop_of s) i |>
-    pair [] |>
-    perhaps (I ##>> Logic.dest_all #>> swap #>> uncurry cons |> try |> perhaps_loop) |>>
-    rev |>
-    (fn (vars, t) =>
-      let
-        val r = Thm.forall_elim_vars 0 r
-        val thy = super_thys_of (r, s)
-        val context = Context.Theory thy
-      in
-        case unifiers context (Thm.prop_of r, t) |> Seq.chop 2 of
-            ([], _) => raise THM ("CCOMPN: no unifiers", 0, [r, s])
-          | ((u as (tys, _)) :: _, _) =>
-              Drule.instantiate_normalize u r |>
-              pair
-                (vars |>
-                 map
-                  (typ_subst_TVars (map (fst |> apfst ##> Thm.typ_of) tys) |> apsnd #>
-                   Free #>
-                   Thm.global_cterm_of thy)) |->
-              Drule.forall_intr_list |>
-              rpair (i, s) |>
-              Scan.triple2 |>
-              Drule.compose
-      end)
+    let
+      val thy = super_thys_of (r, s)
+    in
+      Logic.get_goal (Thm.prop_of s) i |>
+      pair [] |>
+      perhaps (I ##>> Logic.dest_all #>> swap #>> uncurry cons |> try |> perhaps_loop) |>>
+      rev ||>
+      pair (Thm.forall_elim_vars 0 r) ||>
+      `(apfst Thm.prop_of #> unifiers (Context.Theory thy) #> Seq.hd) ||>
+      apsnd fst ||>
+      `(uncurry Drule.instantiate_normalize) ||>
+      apsnd (fst o fst) |>
+      (fn (vars, (r, tys)) =>
+        vars |>
+        map
+          (typ_subst_TVars (map (fst |> apfst ##> Thm.typ_of) tys) |> apsnd #>
+           Free #>
+           Thm.global_cterm_of thy) |>
+        rpair r |->
+        Drule.forall_intr_list |>
+        rpair (i, s) |>
+        Scan.triple2 |>
+        Drule.compose)
+    end
   fun r CCOMP s = r CCOMPN (1, s)
 end
 structure Basic_Util : BASIC_UTIL = Util
 open Basic_Util
 \<close>
+
+lemma prem: "A a x \<Longrightarrow> B b y \<Longrightarrow> C A B" sorry
+lemma g: "(\<And> A B x y. A a x \<Longrightarrow> B b y \<Longrightarrow> C A B) \<Longrightarrow> G" sorry
+ML \<open>@{thm prem} CCOMP @{thm g}\<close>
 
 thm subset_imageE
 thm someI
