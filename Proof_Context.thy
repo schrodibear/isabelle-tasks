@@ -14,8 +14,8 @@ structure Util = struct
     else if Context.subthy (thy2, thy1) then thy2
     else raise THEORY ("No proper supertheory", [thy1, thy2])
   val super_thys_of = apply2 Thm.theory_of_thm #> super_thys
-  fun unifiers context (t1, t2) =
-    Unify.unifiers (context, Envir.init, [(t1, t2)]) |>
+  fun unifiers context max (t1, t2) =
+    Unify.unifiers (context, Envir.empty max, [(t1, t2)]) |>
     Seq.map
       (fn (Envir.Envir { tyenv, tenv, ... }, _) =>
         (tyenv |>
@@ -30,13 +30,14 @@ structure Util = struct
   fun r CCOMPN (i, s) =
     let
       val thy = super_thys_of (r, s)
+      val max = Thm.maxidx_of r + Thm.maxidx_of s + 1
     in
       Logic.get_goal (Thm.prop_of s) i |>
       pair [] |>
       perhaps (I ##>> Logic.dest_all #>> swap #>> uncurry cons |> try |> perhaps_loop) |>>
       rev ||>
-      pair (Thm.forall_elim_vars 0 r) ||>
-      `(apfst Thm.prop_of #> unifiers (Context.Theory thy) #> Seq.hd) ||>
+      pair (Thm.forall_elim_vars 0 r |> Thm.incr_indexes (Thm.maxidx_of s + 1)) ||>
+      `(apfst Thm.prop_of #> unifiers (Context.Theory thy) max #> Seq.hd) ||>
       apsnd fst ||>
       `(uncurry Drule.instantiate_normalize) ||>
       apsnd (fst o fst) |>
