@@ -18,11 +18,9 @@ structure Util = struct
     Unify.unifiers (context, Envir.empty max, [(t1, t2)]) |>
     Seq.map
       (fn (Envir.Envir { tyenv, tenv, ... }, _) =>
-        (tyenv |>
-         Vartab.dest |>
+        (tyenv |> Vartab.dest |>
          map (fn (xi, (S, T)) => ((xi, S), Context.cases Thm.global_ctyp_of Thm.ctyp_of context T)),
-         tenv |>
-         Vartab.dest |>
+         tenv |> Vartab.dest |>
          map
            (fn (xi, (T, t)) =>
              ((xi, Envir.subst_type tyenv T),
@@ -33,25 +31,15 @@ structure Util = struct
       val max = Thm.maxidx_of r + Thm.maxidx_of s + 1
     in
       Logic.get_goal (Thm.prop_of s) i |>
-      pair [] |>
-      perhaps (I ##>> Logic.dest_all #>> swap #>> uncurry cons |> try |> perhaps_loop) |>>
-      rev ||>
+      pair [] |> perhaps (I ##>> Logic.dest_all #>> swap #>> uncurry cons |> try |> perhaps_loop) |>> rev ||>
       pair (Thm.forall_elim_vars 0 r |> Thm.incr_indexes (Thm.maxidx_of s + 1)) ||>
-      `(apfst Thm.prop_of #> unifiers (Context.Theory thy) max #> Seq.hd) ||>
-      apsnd fst ||>
-      `(uncurry Drule.instantiate_normalize) ||>
-      apsnd (fst o fst) |>
+      `(apfst Thm.prop_of #> unifiers (Context.Theory thy) max #> Seq.hd) ||> apsnd fst ||>
+      `(uncurry Drule.instantiate_normalize) ||> apsnd (fst o fst) |>
       (fn (vars, (r, tys)) =>
         vars |>
-        map
-          (typ_subst_TVars (map (fst |> apfst ##> Thm.typ_of) tys) |> apsnd #>
-           Free #>
-           Thm.global_cterm_of thy) |>
-        rpair r |->
-        Drule.forall_intr_list |>
-        rpair (i, s) |>
-        Scan.triple2 |>
-        Drule.compose)
+        map (typ_subst_TVars (map (fst |> apfst ##> Thm.typ_of) tys) |> apsnd #> Free #> Thm.global_cterm_of thy) |>
+        rpair r |-> Drule.forall_intr_list |>
+        rpair (i, s) |> Scan.triple2 |> Drule.compose)
     end
   fun r CCOMP s = r CCOMPN (1, s)
 end
@@ -79,7 +67,6 @@ structure Elim_Obtain = struct
     in
       Goal.prove ctxt xs [] (HOLogic.mk_eq (lhs, t) |> HOLogic.mk_Trueprop) (HEADGOAL (prod_sel_tac ctxt) |> K)
     end
-  structure Rule = Proof_Data (type T = thm option val init = K NONE)
   val True_simp = @{lemma "(True \<and> A) = A" by simp} |> meta_eq
   fun conj_elim_tac ctxt =
     REPEAT_ALL_NEW (eresolve_tac ctxt [@{thm conjE}]) THEN'
@@ -87,9 +74,9 @@ structure Elim_Obtain = struct
   fun export ctxt vars chyps thm =
     let
       val phyps = map Thm.term_of chyps
-      val hyps = map HOLogic.dest_Trueprop phyps
       val conj =
-        hyps |>
+        phyps |>
+        map HOLogic.dest_Trueprop |>
         List.foldl (HOLogic.mk_conj o swap) \<^term>\<open>True\<close> |>
         Raw_Simplifier.rewrite_term (Proof_Context.theory_of ctxt) [True_simp] []
       val pconj = HOLogic.mk_Trueprop conj
@@ -99,37 +86,44 @@ structure Elim_Obtain = struct
            (fn g => HEADGOAL (conj_elim_tac ctxt) |> K |> Goal.prove ctxt (map fst vars) [] g))
           phyps
       val cconj = Thm.cterm_of ctxt pconj
-      val asm = Thm.assume cconj
       val cfrees = map (Thm.cterm_of ctxt o Free) vars
       val n = length vars
-      val subs =
-        1 upto n |>
-        map (nth_conv ctxt n) |>
-        map (Drule.instantiate'_normalize (map (SOME o Thm.ctyp_of ctxt o snd) vars) (map SOME cfrees) #> meta_eq)
-      val gthm =
+      val convs = 1 upto n |> map (nth_conv ctxt n #> meta_eq)
+      val subs = map (Drule.infer_instantiate' ctxt (map SOME cfrees)) convs
+      val gthm = \<comment> \<open>\<open>hyps ?\<^bold>x \<Longrightarrow> G ?\<^bold>x\<close>\<close>
         fold_rev Thm.implies_intr chyps thm |>
-        fold (curry op RS asm oo curry op RS) intros |>
+        fold (curry op RS (Thm.assume cconj) oo curry op RS) intros |>
         Thm.implies_intr cconj
-      val gprop =
+      val gprop = \<comment> \<open>\<open>hyps (tup \<^bold>x) \<Longrightarrow> G (tup \<^bold>x)\<close>, all local Frees are grouped in the same tuple\<close>
         gthm |>
         Thm.prop_of |>
         Term.subst_free (map (swap o Logic.dest_equals o Thm.prop_of) subs) |>
         Thm.cterm_of ctxt
       val gthm =
         gprop |>
-        Goal.init |>
-        HEADGOAL (rewrite_goal_tac ctxt subs) |>
-        Seq.hd |>
-        pair gthm |>
-        op COMP |>
-        Goal.conclude |>
+        Goal.init |> HEADGOAL (rewrite_goal_tac ctxt subs) |> Seq.hd |> pair gthm |> op COMP |> Goal.conclude |>
+        \<comment> \<open>\<Up> Have proved \<open>gprop\<close> from \<open>gthm\<close>\<close>
         Conv.fconv_rule (Object_Logic.atomize ctxt) |>
         fold Thm.forall_intr cfrees |>
-        funpow (n - 1) (op CCOMP o rpair @{thm prod.induct})
-    in \<^print> (intros,  gthm)
+        funpow (n - 1) (op CCOMP o rpair @{thm prod.induct}) |>
+        \<comment> \<open>\<Up> Have proved \<open>gprop\<close>, where \<open>?x\<close> is a single Var, \<^emph>\<open>not\<close> a vector\<close>
+        rpair @{thm mp} |> op COMP |>
+        rpair (2, @{thm someI2}) |> op CCOMPN
+        \<comment> \<open>\<Up> Replaced this ?x \<^emph>\<open>in the goal\<close> with \<open>SOME x. hyps (tup x)\<close>, thus eliminating the local dep\<close>
+      val u = \<comment> \<open>Simplify \<open>gthm\<close> by instantiating it so its premise unifies with that of original \<open>gprop\<close>\<close>
+        (gprop, Thm.cprop_of gthm) |> apply2 (Thm.term_of #> Logic.dest_implies #> fst) |>
+        Util.unifiers (Context.Proof ctxt) (Thm.maxidx_of gthm) |> Seq.hd
+    in
+      Drule.instantiate_normalize u gthm |>
+      rewrite_rule ctxt convs |>
+      curry op RS @{thm conjI} |>
+      Drule.generalize (map (fst o Term.dest_TFree o snd) vars, map fst vars) |> Drule.zero_var_indexes
     end
+  structure Rule = Proof_Data (type T = thm option val init = K NONE)
 end
 \<close>
+
+declare [[ML_print_depth=200]]
 
 ML \<open>
 let
@@ -137,8 +131,8 @@ let
   val BC = \<^cprop>\<open>B = C\<close>
   val thmAB = Thm.assume AB
   val thmBC = Thm.assume BC
-  val thm = @{thm trans} OF [thmAB, thmBC]
-  val vars = ["A", "B", "C"] |> map (rpair \<^typ>\<open>'a\<close>)
+  val thm = Thm.implies_intr \<^cprop>\<open>D\<close> (@{thm trans} OF [thmAB, thmBC])
+  val vars = ["A",  "B", "C"] |> map (rpair \<^typ>\<open>'a\<close>)
 in
   Elim_Obtain.export \<^context> vars [AB, BC] thm
 end
