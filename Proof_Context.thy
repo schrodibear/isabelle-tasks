@@ -48,7 +48,7 @@ open Basic_Util
 \<close>
 
 ML \<open>
-structure Elim_Obtain = struct
+structure Hilbert_Guess = struct
   fun meta_eq e = e RS @{thm atomize_eq[THEN equal_elim_rule2]}
   val prod_conv_thms = [@{thm fst_conv}, @{thm snd_conv}] |> map meta_eq
   fun prod_sel_tac ctxt =
@@ -71,7 +71,7 @@ structure Elim_Obtain = struct
   fun conj_elim_tac ctxt =
     REPEAT_ALL_NEW (eresolve_tac ctxt [@{thm conjE}]) THEN'
     assume_tac ctxt
-  fun export ctxt vars chyps thm =
+  fun export0 ctxt vars chyps thm =
     let
       val phyps = map Thm.term_of chyps
       val conj =
@@ -88,8 +88,7 @@ structure Elim_Obtain = struct
       val cconj = Thm.cterm_of ctxt pconj
       val cfrees = map (Thm.cterm_of ctxt o Free) vars
       val n = length vars
-      val convs = 1 upto n |> map (nth_conv ctxt n #> meta_eq)
-      val subs = map (Drule.infer_instantiate' ctxt (map SOME cfrees)) convs
+      val subs = 1 upto n |> map (nth_conv ctxt n #> meta_eq) |> map (Drule.infer_instantiate' ctxt (map SOME cfrees))
       val gthm = \<comment> \<open>\<open>hyps ?\<^bold>x \<Longrightarrow> G ?\<^bold>x\<close>\<close>
         fold_rev Thm.implies_intr chyps thm |>
         fold (curry op RS (Thm.assume cconj) oo curry op RS) intros |>
@@ -115,15 +114,38 @@ structure Elim_Obtain = struct
         Util.unifiers (Context.Proof ctxt) (Thm.maxidx_of gthm) |> Seq.hd
     in
       Drule.instantiate_normalize u gthm |>
-      rewrite_rule ctxt convs |>
+      rewrite_rule ctxt subs |>
       curry op RS @{thm conjI} |>
       Drule.generalize (map (fst o Term.dest_TFree o snd) vars, map fst vars) |> Drule.zero_var_indexes
+    end
+  fun export ctxt ethm thm =
+    let
+      val prem = ethm |> Thm.prems_of |> List.last
+      val fix_typ = map_type_tvar (TFree o apfst fst)
+      val vars = Logic.strip_params prem |> map (apsnd fix_typ)
+      val chyps =
+        Logic.strip_assums_hyp prem |>
+        map (pair (vars |> rev |> map Free) #> subst_bounds #> map_types fix_typ #> Thm.cterm_of ctxt)
+      val idx = Thm.maxidx_of thm + 1
+      val prop =
+        Thm.prop_of thm |>
+        map_aterms
+          (fn Free (v, T) =>
+            if member (op = o apsnd fst) vars v
+            then Var ((v, idx), T)
+            else Free (v, T) | t => t) |>
+        map_types (map_type_tfree (fn (t, S) => TVar ((t, idx), S)))
+      val athm = export0 ctxt vars chyps thm CCOMP ethm
+    in
+      Goal.prove ctxt [] [] prop (HEADGOAL (Object_Logic.full_atomize_tac ctxt THEN' resolve_tac ctxt [athm]) |> K)
     end
   structure Rule = Proof_Data (type T = thm option val init = K NONE)
 end
 \<close>
 
 declare [[ML_print_depth=200]]
+
+lemma eqsE[case_names Eqs[AB BC]]: obtains A B C where "A = B" "B = C" by simp
 
 ML \<open>
 let
@@ -134,7 +156,7 @@ let
   val thm = Thm.implies_intr \<^cprop>\<open>D\<close> (@{thm trans} OF [thmAB, thmBC])
   val vars = ["A",  "B", "C"] |> map (rpair \<^typ>\<open>'a\<close>)
 in
-  Elim_Obtain.export \<^context> vars [AB, BC] thm
+  Hilbert_Guess.export \<^context> @{thm eqsE} thm
 end
 \<close>
 
