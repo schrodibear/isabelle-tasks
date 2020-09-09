@@ -17,14 +17,16 @@ structure Util = struct
   fun unifiers context max (t1, t2) =
     Unify.unifiers (context, Envir.empty max, [(t1, t2)]) |>
     Seq.map
-      (fn (Envir.Envir { tyenv, tenv, ... }, _) =>
+      (fn (e as Envir.Envir { tyenv, tenv, ... }, _) =>
         (tyenv |> Vartab.dest |>
-         map (fn (xi, (S, T)) => ((xi, S), Context.cases Thm.global_ctyp_of Thm.ctyp_of context T)),
+         map
+           (fn (xi, (S, T)) =>
+             ((xi, S), T |> Envir.norm_type tyenv |> Context.cases Thm.global_ctyp_of Thm.ctyp_of context)),
          tenv |> Vartab.dest |>
          map
            (fn (xi, (T, t)) =>
-             ((xi, Envir.subst_type tyenv T),
-              Envir.subst_term (tyenv, tenv) t |> Context.cases Thm.global_cterm_of Thm.cterm_of context))))
+             ((xi, Envir.norm_type tyenv T),
+              Envir.norm_term e t |> Context.cases Thm.global_cterm_of Thm.cterm_of context))))
   fun r CCOMPN (i, s) =
     let
       val thy = super_thys_of (r, s)
@@ -80,7 +82,7 @@ structure Hilbert_Guess = struct
         List.foldl (HOLogic.mk_conj o swap) \<^term>\<open>True\<close> |>
         Raw_Simplifier.rewrite_term (Proof_Context.theory_of ctxt) [True_simp] []
       val pconj = HOLogic.mk_Trueprop conj
-      val gens = split_list vars ||> map (fst o Term.dest_TFree) |> swap
+      val gens = split_list vars ||> map (fst o dest_TFree) |> swap
       val intros =
         map
           (curry Logic.mk_implies pconj #>
@@ -99,7 +101,7 @@ structure Hilbert_Guess = struct
       val gprop = \<comment> \<open>\<open>hyps (tup \<^bold>x) \<Longrightarrow> G (tup \<^bold>x)\<close>, all local Frees are grouped in the same tuple\<close>
         gthm |>
         Thm.prop_of |>
-        Term.subst_free (map (swap o Logic.dest_equals o Thm.prop_of) subs) |>
+        subst_free (map (swap o Logic.dest_equals o Thm.prop_of) subs) |>
         Thm.cterm_of ctxt
       val gthm =
         gprop |>
@@ -188,19 +190,28 @@ declare [[ML_print_depth=200]]
 
 lemma eqsE[case_names Eqs[AB BC]]: obtains A B C where "A = B" "B = C" by simp
 
-schematic_goal "D \<Longrightarrow> ?A = ?C"
+schematic_goal U: "D \<Longrightarrow> ?A = ?C"
   apply (hilbert_guess eqsE)
   apply (rule trans[OF AB BC])
   done
 
+lemma G: "(\<lambda> p. F p) = case_prod (\<lambda> x y. F (x, y))" by simp
+lemma GG: "PROP Q (SOME x. P x) \<Longrightarrow> PROP Q (SOME (x, y). P (x, y))" by simp
+
+ML \<open> @{thm U} CCOMP @{thm GG}\<close>
+
+ML \<open>\<^term>\<open>SOME (a,b,c). a = b\<close>\<close>
+
 ML \<open>
 let
-  val AB = \<^cprop>\<open>A = B\<close>
-  val BC = \<^cprop>\<open>B = C\<close>
+  val vars = ["A",  "B", "C"] |> map (rpair \<^typ>\<open>'a\<close>)
+  val subs = vars |> map (`(apfst Name.skolem) #> swap #> apply2 Free)
+  val AB = \<^prop>\<open>A = B\<close> |> subst_free subs |> Thm.cterm_of \<^context>
+  val BC = \<^prop>\<open>B = C\<close> |> subst_free subs |> Thm.cterm_of \<^context>
   val thmAB = Thm.assume AB
   val thmBC = Thm.assume BC
   val thm = Thm.implies_intr \<^cprop>\<open>D\<close> (@{thm trans} OF [thmAB, thmBC])
-  val vars = ["A",  "B", "C"] |> map (rpair \<^typ>\<open>'a\<close>)
+
 in
   Hilbert_Guess.export \<^context> @{thm eqsE} thm
 end
