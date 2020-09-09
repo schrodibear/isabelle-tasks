@@ -80,10 +80,13 @@ structure Hilbert_Guess = struct
         List.foldl (HOLogic.mk_conj o swap) \<^term>\<open>True\<close> |>
         Raw_Simplifier.rewrite_term (Proof_Context.theory_of ctxt) [True_simp] []
       val pconj = HOLogic.mk_Trueprop conj
+      val gens = split_list vars ||> map (fst o Term.dest_TFree) |> swap
       val intros =
         map
           (curry Logic.mk_implies pconj #>
-           (fn g => HEADGOAL (conj_elim_tac ctxt) |> K |> Goal.prove ctxt (map fst vars) [] g))
+           Thm.cterm_of ctxt #>
+           (fn g => HEADGOAL (conj_elim_tac ctxt) |> K |> Goal.prove_internal ctxt [] g) #>
+           Drule.generalize gens)
           phyps
       val cconj = Thm.cterm_of ctxt pconj
       val cfrees = map (Thm.cterm_of ctxt o Free) vars
@@ -116,16 +119,22 @@ structure Hilbert_Guess = struct
       Drule.instantiate_normalize u gthm |>
       rewrite_rule ctxt subs |>
       curry op RS @{thm conjI} |>
-      Drule.generalize (map (fst o Term.dest_TFree o snd) vars, map fst vars) |> Drule.zero_var_indexes
+      Drule.generalize gens |> Drule.zero_var_indexes
     end
-  fun export ctxt ethm thm =
+  fun dest_premise ctxt ethm =
     let
-      val prem = ethm |> Thm.prems_of |> List.last
+      val prem = ethm |> Thm.prems_of |> hd
       val fix_typ = map_type_tvar (TFree o apfst fst)
-      val vars = Logic.strip_params prem |> map (apsnd fix_typ)
+      val vars = Logic.strip_params prem |> map (apfst Name.skolem ##> fix_typ)
       val chyps =
         Logic.strip_assums_hyp prem |>
         map (pair (vars |> rev |> map Free) #> subst_bounds #> map_types fix_typ #> Thm.cterm_of ctxt)
+    in
+      (vars, chyps)
+    end
+  fun export ctxt ethm thm =
+    let
+      val (vars, chyps) = dest_premise ctxt ethm
       val idx = Thm.maxidx_of thm + 1
       val prop =
         Thm.prop_of thm |>
@@ -139,13 +148,50 @@ structure Hilbert_Guess = struct
     in
       Goal.prove ctxt [] [] prop (HEADGOAL (Object_Logic.full_atomize_tac ctxt THEN' resolve_tac ctxt [athm]) |> K)
     end
-  structure Rule = Proof_Data (type T = thm option val init = K NONE)
+  fun export_term ctxt ethm =
+    Thm.cterm_of ctxt #>
+    Thm.reflexive #>
+    export ctxt ethm #>
+    Thm.prop_of #>
+    Logic.dest_equals #>
+    fst
+  fun hilbert_guess_meth (thm, pos) facts (ctxt, st) =
+    let
+      val ethm = List.foldl (op CCOMP) thm facts
+      val binds = Rule_Cases.get thm |> fst |> the_single |> fst |> snd
+      val (vars, hyps) = dest_premise ctxt ethm |>> map (apfst Name.dest_skolem) ||> map Thm.term_of
+      fun exprt goal _ =
+        let
+          fun wrap f = if goal then Goal.conclude #> f #> Goal.protect 0 else f
+        in
+          (wrap (export ctxt ethm), export_term ctxt ethm)
+        end
+    in
+      ctxt |>
+      Proof_Context.add_fixes
+        (vars |> map (apfst (rpair pos #> Binding.make) #> apsnd SOME #> rpair NoSyn #> Scan.triple1)) |> snd |>
+      Proof_Context.add_assms
+        exprt
+        (binds ~~ hyps |> map (apsnd (rpair []) ##> single #>> rpair pos #>> Binding.make #>> Thm.no_attributes)) |>
+      snd |>
+      rpair st |> Seq.succeed |> Seq.make_results
+    end
+  val meth : (Proof.context -> Method.method) context_parser =
+    Scan.lift (Parse.position Parse.thm) >>
+      (fn (thm, pos) => fn ctxt => hilbert_guess_meth (singleton (Attrib.eval_thms ctxt) thm, pos))
 end
 \<close>
+
+method_setup hilbert_guess = \<open>Hilbert_Guess.meth\<close> "Elimination into local context"
 
 declare [[ML_print_depth=200]]
 
 lemma eqsE[case_names Eqs[AB BC]]: obtains A B C where "A = B" "B = C" by simp
+
+schematic_goal "D \<Longrightarrow> ?A = ?C"
+  apply (hilbert_guess eqsE)
+  apply (rule trans[OF AB BC])
+  done
 
 ML \<open>
 let
