@@ -125,14 +125,13 @@ structure Hilbert_Guess = struct
         let
           val m = n - k - 1
           val sub = HOLogic.mk_tuple (drop m frees)
-          val T = type_of sub
-          val x = Term.variant_frees gprop [("x", T)] |> the_single
+          val x = Term.variant_frees gprop [("x", type_of sub)] |> the_single
           val subs = apply2 (fn x => take m frees @ [x] |> HOLogic.mk_tuple |> wrap) (sub, Free x) |> single
         in
           gprop |>
           Object_Logic.atomize_term ctxt |>
           Pattern.rewrite_term (Proof_Context.theory_of ctxt) subs [] |>
-          pair (Free x) |> abstract_over |> (fn t => Abs (fst x, T, t)) |> Thm.cterm_of ctxt |> SOME |> single |>
+          lambda (Free x) |> Thm.cterm_of ctxt |> SOME |> single |>
           rpair @{thm prod.induct} |-> Drule.infer_instantiate' ctxt |>
           Drule.generalize gens
         end
@@ -150,11 +149,32 @@ structure Hilbert_Guess = struct
      val u = \<comment> \<open>Instantiate \<^emph>\<open>premises\<close> of \<open>gthm\<close> with the original tuple of fixed variables\<close>
         (gprop, Thm.prop_of gthm) |> apply2 (Logic.dest_implies #> fst) |>
         Util.unifiers (Context.Proof ctxt) (Thm.maxidx_of gthm) |> Seq.hd
+     val eps_simp =
+       let
+         val vars' = map (apfst Name.dest_skolem) vars
+         val frees' =
+           vars' |>
+           Term.variant_frees (gprop |> subst_free (map (rpair Term.dummy) frees)) |>
+           map Free
+         val prop = gprop |> Logic.dest_implies |> fst |> HOLogic.dest_Trueprop
+         val rhs =
+           prop |>
+           Raw_Simplifier.rewrite_term (Proof_Context.theory_of ctxt) ((@{thm conj_assoc} |> meta_eq) :: subs) [] |>
+           subst_free (frees ~~ frees') |>
+           HOLogic.tupled_lambda (HOLogic.mk_tuple frees')
+         val lhs = prop |> lambda (HOLogic.mk_tuple frees |> wrap)
+       in
+         Goal.prove ctxt [] [] (HOLogic.mk_eq (lhs, rhs) |> HOLogic.mk_Trueprop)
+           (HEADGOAL
+             (rewrite_goal_tac ctxt (map meta_eq [@{thm split_beta'}, @{thm conj_assoc}]) THEN'
+              resolve_tac ctxt [@{thm refl}]) |> K) |>
+         meta_eq
+       end
     in
       Drule.instantiate_normalize u gthm |>
       rewrite_rule ctxt subs |>
       funpow (length chyps - 1) (curry op RS @{thm conjI}) |>
-      rewrite_rule ctxt [@{thm id__def}] |>
+      rewrite_rule ctxt [@{thm id__def}, eps_simp] |>
       Drule.generalize gens |> Drule.zero_var_indexes
     end
   fun dest_premise ctxt ethm =
