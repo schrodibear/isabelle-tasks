@@ -34,19 +34,31 @@ structure Util = struct
     in
       Logic.get_goal (Thm.prop_of s) i |>
       pair [] |> perhaps (I ##>> Logic.dest_all #>> swap #>> uncurry cons |> try |> perhaps_loop) |>> rev ||>
-      pair (Thm.forall_elim_vars 0 r |> Thm.incr_indexes (Thm.maxidx_of s + 1)) ||>
+      pair (Thm.forall_elim_vars (Thm.maxidx_of s + 1) r) ||>
       `(apfst Thm.prop_of #> unifiers (Context.Theory thy) max #> Seq.hd) ||> apsnd fst ||>
       `(uncurry Drule.instantiate_normalize) ||> apsnd (fst o fst) |>
       (fn (vars, (r, tys)) =>
         vars |>
         map (typ_subst_TVars (map (fst |> apfst ##> Thm.typ_of) tys) |> apsnd #> Free #> Thm.global_cterm_of thy) |>
         rpair r |-> Drule.forall_intr_list |>
-        rpair (i, s) |> Scan.triple2 |> Drule.compose)
+        rpair (i, s) |> Scan.triple2 |> Drule.compose |> Drule.zero_var_indexes)
     end
   fun r CCOMP s = r CCOMPN (1, s)
+  val id_t = Unsynchronized.ref NONE
+  fun register_id_ (t : term) = (id_t := SOME t; t)
+  fun id_ T = !id_t |> the |> dest_Const ||> K (T --> T) |> Const
 end
 structure Basic_Util : BASIC_UTIL = Util
 open Basic_Util
+\<close>
+
+setup \<open>Sign.declare_const_global ((\<^binding>\<open>id_\<close>, \<^typ>\<open>'a \<Rightarrow> 'a\<close>), NoSyn) #>> Util.register_id_ #> snd\<close>
+
+setup \<open>
+  pair (\<^binding>\<open>id__def\<close>, \<^term>\<open>I x \<equiv> x\<close> |> subst_free [(\<^term>\<open>I :: 'a \<Rightarrow> 'a\<close>, Util.id_ \<^typ>\<open>'a\<close>)]) #>>
+  Thm.simple_fact #->
+  Global_Theory.add_defs false #>
+  snd
 \<close>
 
 ML \<open>
@@ -56,6 +68,7 @@ structure Hilbert_Guess = struct
   fun prod_sel_tac ctxt =
     rewrite_goal_tac ctxt prod_conv_thms THEN'
     resolve_tac ctxt [@{thm refl}]
+  fun wrap t = Util.id_ (type_of t) $ t
   fun nth_conv ctxt n k =
     let
       val (xs, Ts) =
@@ -65,62 +78,83 @@ structure Hilbert_Guess = struct
       val ts = xs ~~ Ts |> map Free
       val t = nth ts (k - 1)
       val (last, m) = if n = k then (HOLogic.mk_snd, n - 2) else (HOLogic.mk_fst, k - 1)
-      val lhs = HOLogic.mk_tuple ts |> funpow m HOLogic.mk_snd |> last
+      val lhs = HOLogic.mk_tuple ts |> wrap |> funpow m HOLogic.mk_snd |> last
     in
-      Goal.prove ctxt xs [] (HOLogic.mk_eq (lhs, t) |> HOLogic.mk_Trueprop) (HEADGOAL (prod_sel_tac ctxt) |> K)
+      Goal.prove ctxt xs [] (HOLogic.mk_eq (lhs, t) |> HOLogic.mk_Trueprop)
+        (HEADGOAL (rewrite_goal_tac ctxt [@{thm id__def}] THEN' prod_sel_tac ctxt) |> K)
     end
+  val nth_conv = fn ctxt => fn n => if n = 1 then K @{thm refl} else nth_conv ctxt n
   val True_simp = @{lemma "(True \<and> A) = A" by simp} |> meta_eq
   fun conj_elim_tac ctxt =
     REPEAT_ALL_NEW (eresolve_tac ctxt [@{thm conjE}]) THEN'
     assume_tac ctxt
   fun export0 ctxt vars chyps thm =
     let
-      val phyps = map Thm.term_of chyps
-      val conj =
-        phyps |>
-        map HOLogic.dest_Trueprop |>
-        List.foldl (HOLogic.mk_conj o swap) \<^term>\<open>True\<close> |>
-        Raw_Simplifier.rewrite_term (Proof_Context.theory_of ctxt) [True_simp] []
-      val pconj = HOLogic.mk_Trueprop conj
       val gens = split_list vars ||> map (fst o dest_TFree) |> swap
-      val intros =
-        map
-          (curry Logic.mk_implies pconj #>
-           Thm.cterm_of ctxt #>
-           (fn g => HEADGOAL (conj_elim_tac ctxt) |> K |> Goal.prove_internal ctxt [] g) #>
-           Drule.generalize gens)
-          phyps
-      val cconj = Thm.cterm_of ctxt pconj
-      val cfrees = map (Thm.cterm_of ctxt o Free) vars
+      val gthm = \<comment> \<open>\<open>H ?\<^bold>x \<Longrightarrow> G ?\<^bold>x\<close>, \<open>H\<close> is a single conjunction of \<open>chyps\<close>, \<open>G\<close> is \<open>thm\<close>\<close>
+        let
+          val phyps = map Thm.term_of chyps
+          val pconj =
+            phyps |>
+            map HOLogic.dest_Trueprop |>
+            List.foldl (HOLogic.mk_conj o swap) \<^term>\<open>True\<close> |>
+            Raw_Simplifier.rewrite_term (Proof_Context.theory_of ctxt) [True_simp] [] |>
+            HOLogic.mk_Trueprop
+          val intros =
+            map
+              (curry Logic.mk_implies pconj #>
+               Thm.cterm_of ctxt #>
+               (fn g => HEADGOAL (conj_elim_tac ctxt) |> K |> Goal.prove_internal ctxt [] g) #>
+               Drule.generalize gens)
+              phyps
+          val cconj = Thm.cterm_of ctxt pconj
+        in
+          fold_rev Thm.implies_intr chyps thm |>
+          fold (curry op RS (Thm.assume cconj) oo curry op RS) intros |>
+          Thm.implies_intr cconj
+        end
+      val frees = map Free vars
+      val cfrees = map (Thm.cterm_of ctxt) frees
       val n = length vars
       val subs = 1 upto n |> map (nth_conv ctxt n #> meta_eq) |> map (Drule.infer_instantiate' ctxt (map SOME cfrees))
-      val gthm = \<comment> \<open>\<open>hyps ?\<^bold>x \<Longrightarrow> G ?\<^bold>x\<close>\<close>
-        fold_rev Thm.implies_intr chyps thm |>
-        fold (curry op RS (Thm.assume cconj) oo curry op RS) intros |>
-        Thm.implies_intr cconj
-      val gprop = \<comment> \<open>\<open>hyps (tup \<^bold>x) \<Longrightarrow> G (tup \<^bold>x)\<close>, all local Frees are grouped in the same tuple\<close>
+      val gprop = \<comment> \<open>\<open>H (tup \<^bold>x) \<Longrightarrow> G (tup \<^bold>x)\<close>, all local Frees are grouped in the same tuple\<close>
         gthm |>
         Thm.prop_of |>
-        subst_free (map (swap o Logic.dest_equals o Thm.prop_of) subs) |>
-        Thm.cterm_of ctxt
+        subst_free (map (swap o Logic.dest_equals o Thm.prop_of) subs)
+      fun induct k =
+        let
+          val m = n - k - 1
+          val sub = HOLogic.mk_tuple (drop m frees)
+          val T = type_of sub
+          val x = Term.variant_frees gprop [("x", T)] |> the_single
+          val subs = apply2 (fn x => take m frees @ [x] |> HOLogic.mk_tuple |> wrap) (sub, Free x) |> single
+        in
+          gprop |>
+          Object_Logic.atomize_term ctxt |>
+          Pattern.rewrite_term (Proof_Context.theory_of ctxt) subs [] |>
+          pair (Free x) |> abstract_over |> (fn t => Abs (fst x, T, t)) |> Thm.cterm_of ctxt |> SOME |> single |>
+          rpair @{thm prod.induct} |-> Drule.infer_instantiate' ctxt |>
+          Drule.generalize gens
+        end
       val gthm =
-        gprop |>
-        Goal.init |> HEADGOAL (rewrite_goal_tac ctxt subs) |> Seq.hd |> pair gthm |> op COMP |> Goal.conclude |>
+        Goal.prove_internal ctxt [] (Thm.cterm_of ctxt gprop)
+          (HEADGOAL (rewrite_goal_tac ctxt subs THEN' solve_tac ctxt [gthm]) |> K) |>
         \<comment> \<open>\<Up> Have proved \<open>gprop\<close> from \<open>gthm\<close>\<close>
         Conv.fconv_rule (Object_Logic.atomize ctxt) |>
-        fold Thm.forall_intr cfrees |>
-        funpow (n - 1) (op CCOMP o rpair @{thm prod.induct}) |>
-        \<comment> \<open>\<Up> Have proved \<open>gprop\<close>, where \<open>?x\<close> is a single Var, \<^emph>\<open>not\<close> a vector\<close>
+        fold_rev Thm.forall_intr cfrees |>
+        fold (fn n => fn thm => thm CCOMP induct n) (1 upto n - 1) |>
+        \<comment> \<open>\<Up> Have proved atomized \<open>gprop\<close>, where \<open>?x\<close> is a single Var, \<^emph>\<open>not\<close> a vector\<close>
         rpair @{thm mp} |> op COMP |>
         rpair (2, @{thm someI2}) |> op CCOMPN
         \<comment> \<open>\<Up> Replaced this ?x \<^emph>\<open>in the goal\<close> with \<open>SOME x. hyps (tup x)\<close>, thus eliminating the local dep\<close>
-      val u = \<comment> \<open>Simplify \<open>gthm\<close> by instantiating it so its premise unifies with that of original \<open>gprop\<close>\<close>
-        (gprop, Thm.cprop_of gthm) |> apply2 (Thm.term_of #> Logic.dest_implies #> fst) |>
+     val u = \<comment> \<open>Instantiate \<^emph>\<open>premises\<close> of \<open>gthm\<close> with the original tuple of fixed variables\<close>
+        (gprop, Thm.prop_of gthm) |> apply2 (Logic.dest_implies #> fst) |>
         Util.unifiers (Context.Proof ctxt) (Thm.maxidx_of gthm) |> Seq.hd
     in
       Drule.instantiate_normalize u gthm |>
       rewrite_rule ctxt subs |>
-      curry op RS @{thm conjI} |>
+      funpow (length chyps - 1) (curry op RS @{thm conjI}) |>
+      rewrite_rule ctxt [@{thm id__def}] |>
       Drule.generalize gens |> Drule.zero_var_indexes
     end
   fun dest_premise ctxt ethm =
@@ -164,7 +198,7 @@ structure Hilbert_Guess = struct
       val (vars, hyps) = dest_premise ctxt ethm |>> map (apfst Name.dest_skolem) ||> map Thm.term_of
       fun exprt goal _ =
         let
-          fun wrap f = if goal then Goal.conclude #> f #> Goal.protect 0 else f
+          fun wrap f = if goal then fn thm => Goal.conclude thm |> f |> Goal.protect (Thm.nprems_of thm) else f
         in
           (wrap (export ctxt ethm), export_term ctxt ethm)
         end
@@ -188,7 +222,7 @@ method_setup hilbert_guess = \<open>Hilbert_Guess.meth\<close> "Elimination into
 
 declare [[ML_print_depth=200]]
 
-lemma eqsE[case_names Eqs[AB BC]]: obtains A B C where "A = B" "B = C" by simp
+lemma eqsE[case_names Eqs[AB BC Z]]: obtains A B C where "A = B" "B = C" "0 = 0" by simp
 
 schematic_goal U: "D \<Longrightarrow> ?A = ?C"
   apply (hilbert_guess eqsE)
@@ -196,7 +230,9 @@ schematic_goal U: "D \<Longrightarrow> ?A = ?C"
   done
 
 lemma G: "(\<lambda> p. F p) = case_prod (\<lambda> x y. F (x, y))" by simp
-lemma GG: "PROP Q (SOME x. P x) \<Longrightarrow> PROP Q (SOME (x, y). P (x, y))" by simp
+lemma GG: "(SOME x. P x) = (SOME (x, y). P (x, y))" by simp
+
+lemmas t = U[simplified G]
 
 ML \<open> @{thm U} CCOMP @{thm GG}\<close>
 
