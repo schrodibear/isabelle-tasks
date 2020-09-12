@@ -173,9 +173,9 @@ text \<open>
   also correct (a spurious irrelevant assumption just weakens the theorem). A typical usage example:
 \<close>
 ML \<open>
-  Thm.implies_elim (Thm.assume \<^cprop>\<open>PROP A \<Longrightarrow> PROP B\<close>) (Thm.assume \<^cprop>\<open>PROP A\<close>) |>
-  Thm.implies_intr \<^cterm>\<open>PROP A\<close> |>
-  Thm.implies_intr \<^cterm>\<open>PROP A \<Longrightarrow> PROP B\<close>
+  Thm.implies_elim (Thm.assume \<^cprop>\<open>PROP A \<Longrightarrow> PROP B\<close>) (Thm.assume \<^cprop>\<open>PROP A\<close>)
+  |> Thm.implies_intr \<^cterm>\<open>PROP A\<close>
+  |> Thm.implies_intr \<^cterm>\<open>PROP A \<Longrightarrow> PROP B\<close>
 \<close>
 text \<open>
   This produces a theorem \<open>(PROP A \<Longrightarrow> PROP B) \<Longrightarrow> PROP A \<Longrightarrow> PROP B\<close>. Note the \<open>PROP A\<close> notation for Pure
@@ -283,11 +283,11 @@ end\<close>.\\
   in a more sequential fashion as
 \<close>
 ML \<open>
-\<^cprop>\<open>PROP A \<Longrightarrow> PROP B\<close> |>
-Thm.assume |>
-rpair \<^cprop>\<open>PROP A\<close> ||>
-Thm.assume |->
-Thm.implies_elim
+\<^cprop>\<open>PROP A \<Longrightarrow> PROP B\<close>
+|> Thm.assume
+|> rpair \<^cprop>\<open>PROP A\<close>
+||> Thm.assume
+|-> Thm.implies_elim
 \<close>
 text \<open>
 
@@ -468,6 +468,7 @@ text \<open>
   (e.\,g. beta-normalizes the statement of the theorem).
 \<close>
 text \<open>
+
   \<^bigskip>
 
   \marginsymbol
@@ -549,41 +550,41 @@ ML \<open>
     let
       val neg = rpair \<^cterm>\<open>PROP P\<close> ##> Thm.all \<^context> \<^cterm>\<open>PROP P\<close> #> Drule.mk_implies
       val op or =
-        apply2 (rpair \<^cterm>\<open>PROP P\<close> #> Drule.mk_implies) ##>
-        rpair \<^cterm>\<open>PROP P\<close> ##>
-        Drule.mk_implies #>
-        Drule.mk_implies #>
-        Thm.all \<^context> \<^cterm>\<open>PROP P\<close>
+        apply2 (rpair \<^cterm>\<open>PROP P\<close> #> Drule.mk_implies)
+        ##> rpair \<^cterm>\<open>PROP P\<close>
+        ##> Drule.mk_implies
+        #> Drule.mk_implies
+        #> Thm.all \<^context> \<^cterm>\<open>PROP P\<close>
       val excl_mid = Thm.all \<^context> \<^cterm>\<open>PROP Q\<close> (\<^cterm>\<open>PROP Q\<close> or neg \<^cterm>\<open>PROP Q\<close>)
       val a = \<^cterm>\<open>PROP A\<close>
 
       val elim =
-        excl_mid |>
-        Thm.assume |>
-        Thm.forall_elim a |>
-        Thm.forall_elim a |>
-        rpair (Thm.trivial a) |->
-        Thm.implies_elim |>
-        rpair (a |> neg |> neg) ||>
-        Thm.assume ||>
-        (rpair (a |> neg) ##> Thm.assume #-> Thm.implies_elim #> Thm.forall_elim a #> Thm.implies_intr (a |> neg)) |->
-        Thm.implies_elim |>
-        Thm.implies_intr (a |> neg |> neg)
+        excl_mid
+        |> Thm.assume
+        |> Thm.forall_elim a
+        |> Thm.forall_elim a
+        |> rpair (Thm.trivial a)
+        |-> Thm.implies_elim
+        |> rpair (a |> neg |> neg)
+        ||> Thm.assume
+        ||> (rpair (a |> neg) ##> Thm.assume #-> Thm.implies_elim #> Thm.forall_elim a #> Thm.implies_intr (a |> neg))
+        |-> Thm.implies_elim
+        |> Thm.implies_intr (a |> neg |> neg)
       val intro =
-        (a |> neg) |>
-        Thm.assume |>
-        rpair (Thm.assume a) |->
-        Thm.implies_elim |>
-        Thm.implies_intr (a |> neg) |>
-        Thm.implies_intr a
+        a |> neg
+        |> Thm.assume
+        |> rpair (Thm.assume a)
+        |-> Thm.implies_elim
+        |> Thm.implies_intr (a |> neg)
+        |> Thm.implies_intr a
       val thm =
-        Thm.equal_intr elim intro |>
-        Thm.implies_intr excl_mid |>
-        Drule.generalize ([], ["A"])
+        Thm.equal_intr elim intro
+        |> Thm.implies_intr excl_mid
+        |> Drule.generalize ([], ["A"])
     in
-      (\<^binding>\<open>double_negation\<close>, thm) |>
-      Global_Theory.store_thm #>
-      snd
+      (\<^binding>\<open>double_negation\<close>, thm)
+      |> Global_Theory.store_thm
+      #> snd
     end
 \<close>
 
@@ -604,23 +605,23 @@ ML \<open>
       val or_def = \<^cterm>\<open>or \<equiv> \<lambda> A B. (\<And>P. (PROP A \<Longrightarrow> PROP P) \<Longrightarrow> (PROP B \<Longrightarrow> PROP P) \<Longrightarrow> PROP P)\<close>
       val neg_def = \<^cterm>\<open>neg \<equiv> \<lambda> A. (PROP A \<Longrightarrow> (\<And> P. PROP P))\<close>
     in
-      Thm.reflexive \<^cterm>\<open>\<lambda> f g. ((\<And> Q. PROP f Q (g Q)) \<Longrightarrow> PROP g (g A) \<equiv> PROP A)\<close> |>
-      rpair (Thm.assume or_def) |->
-      Thm.combination |>
-      rpair (Thm.assume neg_def) |->
-      Thm.combination |>
-      Thm.symmetric |>
-      Conv.fconv_rule (Thm.beta_conversion true) |>
-      Drule.generalize ([], ["A"]) |>
-      rpair (Global_Theory.get_thm thy "double_negation") |->
-      Thm.equal_elim |>
-      Thm.implies_intr or_def |>
-      Thm.implies_intr neg_def |>
-      Drule.generalize ([], ["or", "neg"]) |>
-      pair \<^binding>\<open>double_negation_eqs\<close> |>
-      rpair thy |->
-      Global_Theory.store_thm |>
-      snd
+      Thm.reflexive \<^cterm>\<open>\<lambda> f g. ((\<And> Q. PROP f Q (g Q)) \<Longrightarrow> PROP g (g A) \<equiv> PROP A)\<close>
+      |> rpair (Thm.assume or_def)
+      |-> Thm.combination
+      |> rpair (Thm.assume neg_def)
+      |-> Thm.combination
+      |> Thm.symmetric
+      |> Conv.fconv_rule (Thm.beta_conversion true)
+      |> Drule.generalize ([], ["A"])
+      |> rpair (Global_Theory.get_thm thy "double_negation")
+      |-> Thm.equal_elim
+      |> Thm.implies_intr or_def
+      |> Thm.implies_intr neg_def
+      |> Drule.generalize ([], ["or", "neg"])
+      |> pair \<^binding>\<open>double_negation_eqs\<close>
+      |> rpair thy
+      |-> Global_Theory.store_thm
+      |> snd
    end
 \<close>
 

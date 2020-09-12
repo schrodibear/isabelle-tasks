@@ -549,20 +549,18 @@ ML \<open>
     let
       val asm = \<^cprop>\<open>x :: 'a \<equiv> y\<close>
     in
-      \<^cterm>\<open>P :: 'a \<Rightarrow> prop\<close> |>
-      Thm.reflexive |>
-      rpair (Thm.assume asm) |->
-      Thm.combination |>
-      Thm.implies_intr asm |>
-      Drule.generalize (["'a"], ["P", "x", "y"])
+      \<^cterm>\<open>P :: 'a \<Rightarrow> prop\<close>
+      |> Thm.reflexive
+      |> rpair (Thm.assume asm)
+      |-> Thm.combination
+      |> Thm.implies_intr asm
+      |> Drule.generalize (["'a"], ["P", "x", "y"])
     end
 \<close>
 
 subsubsection \<open>Problem 2\<close>
 
-ML \<open>
-  val meta_eq = try (fn r => r RS @{thm eq_reflection}) |> perhaps
-\<close>
+ML \<open>val meta_eq = try (fn r => r RS @{thm eq_reflection}) |> perhaps\<close>
 
 subsubsection \<open>Problem 3\<close>
 
@@ -573,17 +571,12 @@ ML \<open>
       let
         fun diff thm' = Thm.eq_thm_prop (thm, thm') |> not
       in
-        cE |>
-        meta_eq |>
-        single |>
-        curry op OF cong |>
-        single |>
-        curry op OF Drule.equal_elim_rule1 |>
-        (fn thm' => Drule.multi_resolve (SOME ctxt) [thm] thm') |>
-        Seq.filter diff |>
-        Seq.chop n |>
-        fst |>
-        try List.last
+        cE
+        |> meta_eq
+        |> single |> curry op OF cong
+        |> single |> curry op OF Drule.equal_elim_rule1
+        |> (fn thm' => Drule.multi_resolve (SOME ctxt) [thm] thm')
+        |> Seq.filter diff |> Seq.chop n |> fst |> try List.last
       end
   in
     fun subst ctxt cE n = subst' ctxt cE n #> the
@@ -611,40 +604,37 @@ ML \<open>
     let
       val asm = \<^cprop>\<open>(s :: 'a set) \<noteq> t\<close>
       val someI_ex =
-        @{thm someI_ex} |>
-        Drule.instantiate'_normalize [SOME \<^ctyp>\<open>'a\<close>] [SOME \<^cterm>\<open>\<lambda> x. x \<in> s \<and> x \<notin> t \<or> x \<in> t \<and> x \<notin> s\<close>]
+        @{thm someI_ex}
+        |> Drule.instantiate'_normalize [SOME \<^ctyp>\<open>'a\<close>] [SOME \<^cterm>\<open>\<lambda> x. x \<in> s \<and> x \<notin> t \<or> x \<in> t \<and> x \<notin> s\<close>]
       val nnf_simp =
-        @{thm HOL.nnf_simps(5)} |>
-        Drule.instantiate'_normalize [] [SOME \<^cterm>\<open>P x :: bool\<close>, SOME \<^cterm>\<open>Q x :: bool\<close>] |>
-        Drule.generalize ([], ["P", "Q"]) |>
-        meta_eq |>
-        Thm.abstract_rule "x" \<^cterm>\<open>x\<close>
+        @{thm HOL.nnf_simps(5)}
+        |> Drule.instantiate'_normalize [] [SOME \<^cterm>\<open>P x :: bool\<close>, SOME \<^cterm>\<open>Q x :: bool\<close>]
+        |> Drule.generalize ([], ["P", "Q"])
+        |> meta_eq
+        |> Thm.abstract_rule "x" \<^cterm>\<open>x\<close>
       val conj_commute =
-        @{thm conj_commute} |>
-        Drule.instantiate'_normalize [] [SOME \<^cterm>\<open>x \<notin> s\<close>, SOME \<^cterm>\<open>x \<in> t\<close>] |>
-        meta_eq |>
-        Thm.abstract_rule "x" \<^cterm>\<open>x\<close>
+        @{thm conj_commute}
+        |> Drule.instantiate'_normalize [] [SOME \<^cterm>\<open>x \<notin> s\<close>, SOME \<^cterm>\<open>x \<in> t\<close>]
+        |> meta_eq
+        |> Thm.abstract_rule "x" \<^cterm>\<open>x\<close>
       val diff =
-        @{thm Diff_iff} |>
-        Drule.instantiate'_normalize [SOME \<^ctyp>\<open>'a\<close>] [SOME \<^cterm>\<open>x :: 'a\<close>] |>
-        meta_eq |>
-        Thm.symmetric |>
-        Thm.abstract_rule "x" \<^cterm>\<open>x\<close>
+        @{thm Diff_iff}
+        |> Drule.instantiate'_normalize [SOME \<^ctyp>\<open>'a\<close>] [SOME \<^cterm>\<open>x :: 'a\<close>]
+        |> meta_eq
+        |> Thm.symmetric
+        |> Thm.abstract_rule "x" \<^cterm>\<open>x\<close>
     in
-      Thm.assume asm |>
-      subst \<^context> @{thm set_eq_iff} 1 |>
-      subst \<^context> @{thm not_all} 1 |>
-      subst \<^context> nnf_simp 1 |>
-      subst \<^context> conj_commute  1 |>
-      Thm.implies_elim someI_ex |>
-      subst_all \<^context> diff |>
-      subst_all \<^context> (@{thm w_def} |> Thm.symmetric) |>
-      Thm.implies_intr asm |>
-      Drule.generalize (["'a"], ["s", "t"]) |>
-      Drule.zero_var_indexes |>
-      pair \<^binding>\<open>set_neqD\<close> |>
-      Global_Theory.store_thm #>
-      snd
+      Thm.assume asm
+      |> subst \<^context> @{thm set_eq_iff} 1
+      |> subst \<^context> @{thm not_all} 1
+      |> subst \<^context> nnf_simp 1
+      |> subst \<^context> conj_commute  1
+      |> Thm.implies_elim someI_ex
+      |> subst_all \<^context> diff
+      |> subst_all \<^context> (@{thm w_def} |> Thm.symmetric)
+      |> Thm.implies_intr asm
+      |> Drule.generalize (["'a"], ["s", "t"]) |> Drule.zero_var_indexes
+      |> pair \<^binding>\<open>set_neqD\<close> |> Global_Theory.store_thm #> snd
     end
 \<close>
 
@@ -662,36 +652,32 @@ ML \<open>
       val in_1 = \<^cprop>\<open>x \<in> {1 :: int}\<close>
       val in_2 = \<^cprop>\<open>x \<in> {2 :: int}\<close>
       val False1 =
-        Thm.assume in_1 |>
-        subst_all \<^context> @{thm singleton_iff} |>
-        rpair (Thm.assume gt2) |->
-        subst_all \<^context> |>
-        pair (Lin_Arith.simproc \<^context> \<^cterm>\<open>2 < (1 :: int)\<close> |> the) |->
-        subst_all \<^context> |>
-        Thm.implies_intr in_1
+        Thm.assume in_1
+        |> subst_all \<^context> @{thm singleton_iff}
+        |> rpair (Thm.assume gt2)
+        |-> subst_all \<^context>
+        |> pair (Lin_Arith.simproc \<^context> \<^cterm>\<open>2 < (1 :: int)\<close> |> the)
+        |-> subst_all \<^context>
+        |> Thm.implies_intr in_1
       val False2 =
-        Thm.assume in_2 |>
-        subst_all \<^context> @{thm singleton_iff} |>
-        rpair (Thm.assume gt2) |->
-        subst_all \<^context> |>
-        pair (Lin_Arith.simproc \<^context> \<^cterm>\<open>2 < (2 :: int)\<close> |> the) |->
-        subst_all \<^context> |>
-        Thm.implies_intr in_2
+        Thm.assume in_2
+        |> subst_all \<^context> @{thm singleton_iff}
+        |> rpair (Thm.assume gt2)
+        |-> subst_all \<^context>
+        |> pair (Lin_Arith.simproc \<^context> \<^cterm>\<open>2 < (2 :: int)\<close> |> the)
+        |-> subst_all \<^context>
+        |> Thm.implies_intr in_2
       val thm =
-        (Thm.assume in_Un RS @{thm UnE}) |>
-        curry op COMP False1 |>
-        curry op COMP False2 |>
-        Thm.implies_intr gt2 |>
-        Thm.equal_elim (@{thm atomize_not} |>  Drule.instantiate'_normalize [] [SOME \<^cterm>\<open>(2 :: int) < x\<close>]) |>
-        Thm.implies_intr in_Un |>
-        subst_all \<^context> @{thm not_less} |>
-        Drule.generalize ([], ["x"]) |>
-        Drule.zero_var_indexes
+        (Thm.assume in_Un RS @{thm UnE})
+        |> curry op COMP False1
+        |> curry op COMP False2
+        |> Thm.implies_intr gt2
+        |> Thm.equal_elim (@{thm atomize_not} |>  Drule.instantiate'_normalize [] [SOME \<^cterm>\<open>(2 :: int) < x\<close>])
+        |> Thm.implies_intr in_Un
+        |> subst_all \<^context> @{thm not_less}
+        |> Drule.generalize ([], ["x"]) |> Drule.zero_var_indexes
     in
-      thm |>
-      pair \<^binding>\<open>sample1\<close> |>
-      Global_Theory.store_thm #>
-      snd
+      thm |> pair \<^binding>\<open>sample1\<close> |> Global_Theory.store_thm #> snd
     end
 \<close>
 

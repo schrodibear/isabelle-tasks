@@ -97,6 +97,7 @@ text \<open>
   Constructs user input with \<^emph>\<open>no\<close> position information (position equal to \<^ML>\<open>Position.no_range\<close>).
 \<close>
 text \<open>
+
   \<^bigskip>
 
   \marginsymbol
@@ -305,6 +306,7 @@ text \<open>
   A convenience function for mapping each component of a tr-rule e.\,g. for parsing it from a pair of strings.
 \<close>
 text \<open>
+
   \<^bigskip>
 
   \marginsymbol
@@ -431,6 +433,7 @@ text \<open>
   constants (particularly, when invoking \<^ML>\<open>Sign.add_syntax\<close>).
 \<close>
 text \<open>
+
   \<^bigskip>
 
   \marginsymbol
@@ -540,6 +543,7 @@ text \<open>
   Registers the theorems in the provided global theory by their names.
 \<close>
 text \<open>
+
   \<^bigskip>
 
   \marginsymbol
@@ -601,77 +605,75 @@ subsubsection \<open>Problem 1\<close>
 setup \<open>
    Sign.declare_const_global
      ((\<^binding>\<open>or\<close>, \<^typ>\<open>prop \<Rightarrow> prop \<Rightarrow> prop\<close>),
-     Infixr (Input.string "\<or>", 35, Position.no_range)) #>
-   snd
+     Infixr (Input.string "\<or>", 35, Position.no_range))
+   #> snd
 \<close>
 
 setup \<open>
    Sign.declare_const_global
      ((\<^binding>\<open>neg\<close>, \<^typ>\<open>prop \<Rightarrow> prop\<close>),
-     Mixfix (Input.string "\<not> _", [40], 40, Position.no_range)) #>
-   snd
+     Mixfix (Input.string "\<not> _", [40], 40, Position.no_range))
+   #> snd
 \<close>
 
 setup \<open>
-   pair
-    (\<^binding>\<open>or_def\<close>,
-     \<^term>\<open>PROP A \<or> PROP B \<equiv> (\<And>P. (PROP A \<Longrightarrow> PROP P) \<Longrightarrow> (PROP B \<Longrightarrow> PROP P) \<Longrightarrow> PROP P)\<close>) #>>
-   Thm.simple_fact #->
-   Global_Theory.add_defs false #>
-   snd
+   pair (\<^binding>\<open>or_def\<close>, \<^term>\<open>PROP A \<or> PROP B \<equiv> (\<And>P. (PROP A \<Longrightarrow> PROP P) \<Longrightarrow> (PROP B \<Longrightarrow> PROP P) \<Longrightarrow> PROP P)\<close>)
+   #>> Thm.simple_fact
+   #-> Global_Theory.add_defs false
+   #> snd
 \<close>
 
 setup \<open>
-   pair (\<^binding>\<open>neg_def\<close>, \<^term>\<open>\<not> PROP A \<equiv> (PROP A \<Longrightarrow> (\<And>P. PROP P))\<close>) #>>
-   Thm.simple_fact #->
-   Global_Theory.add_defs false #>
-   snd
+   pair (\<^binding>\<open>neg_def\<close>, \<^term>\<open>\<not> PROP A \<equiv> (PROP A \<Longrightarrow> (\<And>P. PROP P))\<close>)
+   #>> Thm.simple_fact
+   #-> Global_Theory.add_defs false
+   #> snd
 \<close>
 
 subsubsection \<open>Problem 2\<close>
 
 setup \<open>
-   Thm.add_axiom_global (\<^binding>\<open>excl_mid\<close>, \<^term>\<open>\<And>P. PROP P \<or> \<not> PROP P\<close>) #>>
-   apsnd (Thm.forall_elim \<^cterm>\<open>PROP P\<close> #> Drule.generalize ([], ["P"])) #>>
-   apfst (K \<^binding>\<open>excl_mid\<close>) #>>
-   Thm.no_attributes #->
-   Global_Theory.add_thm #>
-   snd
+   Thm.add_axiom_global (\<^binding>\<open>excl_mid\<close>, \<^term>\<open>\<And>P. PROP P \<or> \<not> PROP P\<close>)
+   #>> apsnd (Thm.forall_elim \<^cterm>\<open>PROP P\<close> #> Drule.generalize ([], ["P"]))
+   #>> apfst (K \<^binding>\<open>excl_mid\<close>)
+   #>> Thm.no_attributes
+   #-> Global_Theory.add_thm
+   #> snd
 \<close>
 
 ML \<open>
   val prove_double_negation =
     let
       val ltr =
-        @{thm excl_mid} |>
-        Thm.instantiate' [] [SOME \<^cterm>\<open>PROP A\<close>] |>
-        rewrite_rule \<^context> [@{thm or_def}] |>
-        Thm.forall_elim \<^cterm>\<open>PROP A\<close> |>
-        rpair (Thm.trivial \<^cterm>\<open>PROP A\<close>) |->
-        Thm.implies_elim |>
-        rpair (Thm.assume \<^cterm>\<open>\<not> \<not> PROP A\<close>) ||>
-        (rpair (Thm.assume \<^cterm>\<open>\<not> PROP A\<close>) #>
-         apply2 (rewrite_rule \<^context> [@{thm neg_def}]) #->
-         Thm.implies_elim #>
-         Thm.forall_elim \<^cterm>\<open>PROP A\<close> #>
-         Thm.implies_intr \<^cterm>\<open>\<not> PROP A\<close>) |->
-        Thm.implies_elim |>
-        Thm.implies_intr \<^cterm>\<open>\<not> \<not> PROP A\<close>
-       val rtl =
-        Thm.assume \<^cterm>\<open>\<not> PROP A\<close> |>
-        rewrite_rule \<^context> [@{thm neg_def}] |>
-        rpair (Thm.assume \<^cterm>\<open>PROP A\<close>) |->
-        Thm.implies_elim |>
-        Thm.implies_intr \<^cterm>\<open>\<not> PROP A\<close> |>
-        Thm.implies_intr \<^cterm>\<open>PROP A\<close> |>
-        rewrite_rule \<^context> [@{thm neg_def} |> Thm.symmetric]
+        @{thm excl_mid}
+        |> Thm.instantiate' [] [SOME \<^cterm>\<open>PROP A\<close>]
+        |> rewrite_rule \<^context> [@{thm or_def}]
+        |> Thm.forall_elim \<^cterm>\<open>PROP A\<close>
+        |> rpair (Thm.trivial \<^cterm>\<open>PROP A\<close>)
+        |-> Thm.implies_elim
+        |> rpair (Thm.assume \<^cterm>\<open>\<not> \<not> PROP A\<close>)
+        ||> (rpair (Thm.assume \<^cterm>\<open>\<not> PROP A\<close>)
+        #> apply2 (rewrite_rule \<^context> [@{thm neg_def}])
+        #-> Thm.implies_elim
+        #> Thm.forall_elim \<^cterm>\<open>PROP A\<close>
+        #> Thm.implies_intr \<^cterm>\<open>\<not> PROP A\<close>)
+        |-> Thm.implies_elim
+        |> Thm.implies_intr \<^cterm>\<open>\<not> \<not> PROP A\<close>
+      val rtl =
+        Thm.assume \<^cterm>\<open>\<not> PROP A\<close>
+        |> rewrite_rule \<^context> [@{thm neg_def}]
+        |> rpair (Thm.assume \<^cterm>\<open>PROP A\<close>)
+        |-> Thm.implies_elim
+        |> Thm.implies_intr \<^cterm>\<open>\<not> PROP A\<close>
+        |> Thm.implies_intr \<^cterm>\<open>PROP A\<close>
+        |> rewrite_rule \<^context> [@{thm neg_def} |> Thm.symmetric]
     in
-      Thm.equal_intr ltr rtl |>
-      Drule.generalize ([], ["A"]) |>
-      pair \<^binding>\<open>double_negation\<close> |>
-      Thm.no_attributes |>
-      Global_Theory.add_thm #>
-      snd
+      Thm.equal_intr ltr rtl
+      |> Drule.generalize ([], ["A"])
+      |> pair \<^binding>\<open>double_negation\<close>
+      |> Thm.no_attributes
+      |> Global_Theory.add_thm
+      #> snd
     end
 \<close>
 
@@ -686,84 +688,83 @@ setup \<open>Sign.add_types_global [(\<^binding>\<open>set\<close>, 1, NoSyn)]\<
 setup \<open>
    Sign.declare_const_global
      ((\<^binding>\<open>member\<close>, \<^typ>\<open>'a \<Rightarrow> 'a set \<Rightarrow> prop\<close>),
-     Infix (Input.string "\<in>", 50, Position.no_range)) #>
-   snd
+     Infix (Input.string "\<in>", 50, Position.no_range))
+   #> snd
 \<close>
 
 setup \<open>
-   Sign.declare_const_global
-     ((\<^binding>\<open>Collect\<close>, \<^typ>\<open>('a \<Rightarrow> prop) \<Rightarrow> 'a set\<close>), NoSyn) #>
-   snd #>
-   Sign.add_syntax
+   Sign.declare_const_global ((\<^binding>\<open>Collect\<close>, \<^typ>\<open>('a \<Rightarrow> prop) \<Rightarrow> 'a set\<close>), NoSyn)
+   #> snd
+   #> Sign.add_syntax
      Syntax.mode_default
      [("_Collect",
        Proof_Context.read_typ_syntax \<^context> "pttrn \<Rightarrow> any \<Rightarrow> 'a set",
-       Mixfix (Input.string "(1{_./ _})", [], 1000, Position.no_range))] #>
-   (fn thy =>
-      let
-        val ctxt = Proof_Context.init_global thy
-      in
-        Sign.add_trrules
-          [Syntax.map_trrule
-            (Syntax_Phases.parse_ast_pattern ctxt o pair "logic")
-            (Syntax.Parse_Print_Rule ("{x. P}", "CONST Collect (\<lambda>x. P)"))]
-          thy
-      end)
+       Mixfix (Input.string "(1{_./ _})", [], 1000, Position.no_range))]
+   #> (fn thy =>
+     let
+       val ctxt = Proof_Context.init_global thy
+     in
+       Sign.add_trrules
+         [Syntax.map_trrule
+           (Syntax_Phases.parse_ast_pattern ctxt o pair "logic")
+           (Syntax.Parse_Print_Rule ("{x. P}", "CONST Collect (\<lambda>x. P)"))]
+         thy
+     end)
 \<close>
 
 subsubsection \<open>Problem 5 (directly contains solution of problem 4)\<close>
 
 setup \<open>
-   Thm.add_axiom_global (\<^binding>\<open>elem\<close>, \<^term>\<open>\<And>S x. x \<in> Collect S \<equiv> S x\<close>) #>>
-   apsnd
-     (Thm.forall_elim \<^cterm>\<open>S :: _ \<Rightarrow> prop\<close> #>
-      Thm.forall_elim \<^cterm>\<open>x\<close> #>
-      Drule.generalize (["'a"], ["S", "x"])) #>>
-   apfst (K \<^binding>\<open>elem\<close>) #>>
-   Thm.no_attributes #->
-   Global_Theory.add_thm #>
-   snd
+   Thm.add_axiom_global (\<^binding>\<open>elem\<close>, \<^term>\<open>\<And>S x. x \<in> Collect S \<equiv> S x\<close>)
+   #>> apsnd
+     (Thm.forall_elim \<^cterm>\<open>S :: _ \<Rightarrow> prop\<close>
+      #> Thm.forall_elim \<^cterm>\<open>x\<close>
+      #> Drule.generalize (["'a"], ["S", "x"]))
+   #>> apfst (K \<^binding>\<open>elem\<close>)
+   #>> Thm.no_attributes
+   #-> Global_Theory.add_thm
+   #> snd
 \<close>
 
 setup \<open>
-   Thm.add_axiom_global (\<^binding>\<open>set\<close>, \<^term>\<open>\<And>S x. {x. x \<in> S} \<equiv> S\<close>) #>>
-   apsnd
-     (Thm.forall_elim \<^cterm>\<open>S :: _ set\<close> #>
-      Thm.forall_elim \<^cterm>\<open>x :: 'b\<close> #>
-      Drule.generalize (["'a"], ["S", "x"])) #>>
-   apfst (K \<^binding>\<open>set\<close>) #>>
-   Thm.no_attributes #->
-   Global_Theory.add_thm #>
-   snd
+   Thm.add_axiom_global (\<^binding>\<open>set\<close>, \<^term>\<open>\<And>S x. {x. x \<in> S} \<equiv> S\<close>)
+   #>> apsnd
+     (Thm.forall_elim \<^cterm>\<open>S :: _ set\<close>
+      #> Thm.forall_elim \<^cterm>\<open>x :: 'b\<close>
+      #> Drule.generalize (["'a"], ["S", "x"]))
+   #>> apfst (K \<^binding>\<open>set\<close>)
+   #>> Thm.no_attributes
+   #-> Global_Theory.add_thm
+   #> snd
 \<close>
 
 ML \<open>
   val prove_set_eq_iff =
-    Thm.assume \<^cterm>\<open>x \<in> A\<close> |>
-    rewrite_rule \<^context> [Thm.assume \<^cterm>\<open>A :: 'a set \<equiv> B\<close>] |>
-    Thm.implies_intr \<^cterm>\<open>x \<in> A\<close> |>
-    rpair (Thm.assume \<^cterm>\<open>x \<in> B\<close>) ||>
-    rewrite_rule \<^context> [Thm.assume \<^cterm>\<open>A :: 'a set \<equiv> B\<close> |> Thm.symmetric] ||>
-    Thm.implies_intr \<^cterm>\<open>x \<in> B\<close> |->
-    Thm.equal_intr |>
-    Thm.forall_intr \<^cterm>\<open>x\<close> |>
-    Thm.implies_intr \<^cterm>\<open>A :: 'a set \<equiv> B\<close> |>
-    rpair @{thm set} ||>
-    Thm.instantiate' [SOME \<^ctyp>\<open>'a\<close>] [SOME \<^cterm>\<open>A :: 'a set\<close>] ||>
-    Thm.symmetric ||>
-    pair (Thm.assume \<^cterm>\<open>\<And> x. x \<in> A \<equiv> x \<in> B\<close>) ||>
-    apfst (Thm.forall_elim \<^cterm>\<open>x\<close> #> Drule.generalize ([], ["x"]) #> single) ||>
-    uncurry (rewrite_rule \<^context>) ||>
-    pair @{thm set} ||>
-    apfst (Thm.instantiate' [SOME \<^ctyp>\<open>'a\<close>] [SOME \<^cterm>\<open>B :: 'a set\<close>] #> single) ||>
-    uncurry (rewrite_rule \<^context>) ||>
-    Thm.implies_intr \<^cterm>\<open>\<And> x. x \<in> A \<equiv> x \<in> B\<close> |->
-    Thm.equal_intr |>
-    Drule.generalize (["'a"], ["A", "B"]) |>
-    pair \<^binding>\<open>set_eq_iff\<close> |>
-    Thm.no_attributes |>
-    Global_Theory.add_thm #>
-    snd
+    Thm.assume \<^cterm>\<open>x \<in> A\<close>
+    |> rewrite_rule \<^context> [Thm.assume \<^cterm>\<open>A :: 'a set \<equiv> B\<close>]
+    |> Thm.implies_intr \<^cterm>\<open>x \<in> A\<close>
+    |> rpair (Thm.assume \<^cterm>\<open>x \<in> B\<close>)
+    ||> rewrite_rule \<^context> [Thm.assume \<^cterm>\<open>A :: 'a set \<equiv> B\<close> |> Thm.symmetric]
+    ||> Thm.implies_intr \<^cterm>\<open>x \<in> B\<close>
+    |-> Thm.equal_intr
+    |> Thm.forall_intr \<^cterm>\<open>x\<close>
+    |> Thm.implies_intr \<^cterm>\<open>A :: 'a set \<equiv> B\<close>
+    |> rpair @{thm set}
+    ||> Thm.instantiate' [SOME \<^ctyp>\<open>'a\<close>] [SOME \<^cterm>\<open>A :: 'a set\<close>]
+    ||> Thm.symmetric
+    ||> pair (Thm.assume \<^cterm>\<open>\<And> x. x \<in> A \<equiv> x \<in> B\<close>)
+    ||> apfst (Thm.forall_elim \<^cterm>\<open>x\<close> #> Drule.generalize ([], ["x"]) #> single)
+    ||> uncurry (rewrite_rule \<^context>)
+    ||> pair @{thm set}
+    ||> apfst (Thm.instantiate' [SOME \<^ctyp>\<open>'a\<close>] [SOME \<^cterm>\<open>B :: 'a set\<close>] #> single)
+    ||> uncurry (rewrite_rule \<^context>)
+    ||> Thm.implies_intr \<^cterm>\<open>\<And> x. x \<in> A \<equiv> x \<in> B\<close>
+    |-> Thm.equal_intr
+    |> Drule.generalize (["'a"], ["A", "B"])
+    |> pair \<^binding>\<open>set_eq_iff\<close>
+    |> Thm.no_attributes
+    |> Global_Theory.add_thm
+    #> snd
 \<close>
 
 setup \<open>prove_set_eq_iff\<close>
@@ -775,27 +776,25 @@ subsubsection \<open>Problem 6\<close>
 setup \<open>Sign.declare_const_global ((\<^binding>\<open>C\<close>, \<^typ>\<open>('a \<Rightarrow> 'b) set\<close>), NoSyn) #> snd\<close>
 
 setup \<open>
-   pair
-    (\<^binding>\<open>C_def\<close>,
-     \<^term>\<open>C \<equiv> {f. \<And> x y. f x \<equiv> f y}\<close>) #>>
-   Thm.simple_fact #->
-   Global_Theory.add_defs false #>
-   snd
+   pair (\<^binding>\<open>C_def\<close>, \<^term>\<open>C \<equiv> {f. \<And> x y. f x \<equiv> f y}\<close>)
+   #>> Thm.simple_fact
+   #-> Global_Theory.add_defs false
+   #> snd
 \<close>
 
 ML \<open>
   val prove_C_iff =
-    @{thm set_eq_iff} |>
-    Thm.instantiate' [SOME \<^ctyp>\<open>'a \<Rightarrow> 'b\<close>] [SOME \<^cterm>\<open>C\<close>, SOME \<^cterm>\<open>{f. \<And> x y. f x \<equiv> f y}\<close>] |>
-    rpair (@{thm C_def} |> Thm.instantiate' [SOME \<^ctyp>\<open>'a\<close>, SOME \<^ctyp>\<open>'b\<close>] []) |->
-    Thm.equal_elim |>
-    Thm.forall_elim \<^cterm>\<open>f :: 'a \<Rightarrow> 'b\<close> |>
-    rewrite_rule \<^context> [@{thm elem}] |>
-    Drule.generalize (["'a", "'b"], ["f"]) |>
-    pair \<^binding>\<open>C_iff\<close> |>
-    Thm.no_attributes |>
-    Global_Theory.add_thm #>
-    snd
+    @{thm set_eq_iff}
+    |> Thm.instantiate' [SOME \<^ctyp>\<open>'a \<Rightarrow> 'b\<close>] [SOME \<^cterm>\<open>C\<close>, SOME \<^cterm>\<open>{f. \<And> x y. f x \<equiv> f y}\<close>]
+    |> rpair (@{thm C_def} |> Thm.instantiate' [SOME \<^ctyp>\<open>'a\<close>, SOME \<^ctyp>\<open>'b\<close>] [])
+    |-> Thm.equal_elim
+    |> Thm.forall_elim \<^cterm>\<open>f :: 'a \<Rightarrow> 'b\<close>
+    |> rewrite_rule \<^context> [@{thm elem}]
+    |> Drule.generalize (["'a", "'b"], ["f"])
+    |> pair \<^binding>\<open>C_iff\<close>
+    |> Thm.no_attributes
+    |> Global_Theory.add_thm
+    #> snd
 \<close>
 
 setup \<open>prove_C_iff\<close>

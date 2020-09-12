@@ -397,6 +397,7 @@ text\<open>
   in particular, also supports disequalities (\<open>a \<noteq> b \<Longrightarrow> b \<noteq> a\<close>).
 \<close>
 text \<open>
+
   \<^bigskip>
 
   \marginsymbol
@@ -502,12 +503,8 @@ subsubsection \<open>Problem 1\<close>
 setup \<open>Sign.declare_const_global ((\<^binding>\<open>w\<close>, \<^typ>\<open>'a set \<Rightarrow> 'a set \<Rightarrow> 'a\<close>), NoSyn) #> snd\<close>
 
 setup \<open>
-   pair
-    (\<^binding>\<open>w_def\<close>,
-     \<^term>\<open>w s t \<equiv> SOME x. x \<in> s - t \<or> x \<in> t - s\<close>) #>>
-   Thm.simple_fact #->
-   Global_Theory.add_defs false #>
-   snd
+   pair (\<^binding>\<open>w_def\<close>, \<^term>\<open>w s t \<equiv> SOME x. x \<in> s - t \<or> x \<in> t - s\<close>)
+   #>> Thm.simple_fact #-> Global_Theory.add_defs false #> snd
 \<close>
 
 thm w_def
@@ -530,17 +527,15 @@ ML \<open>
     Goal.prove \<^context> ["s", "t"] []
       \<^prop>\<open>s \<noteq> t \<Longrightarrow> w s t \<in> s \<and> w s t \<notin> t \<or> w s t \<notin> s \<and> w s t \<in> t\<close>
       (fn { context=ctxt, ... } =>
-        Local_Defs.unfold_tac ctxt [@{thm set_eq_iff}, @{thm not_all}, @{thm HOL.nnf_simps(5)}] THEN
-        HEADGOAL (eresolve_tac ctxt [@{thm exE}]) THEN
-        HEADGOAL (EqSubst.eqsubst_asm_tac ctxt [2] [@{thm conj_commute}]) THEN
-        HEADGOAL (EqSubst.eqsubst_tac ctxt [2] [@{thm conj_commute}]) THEN
-        Local_Defs.unfold_tac
+        Local_Defs.unfold_tac ctxt [@{thm set_eq_iff}, @{thm not_all}, @{thm HOL.nnf_simps(5)}]
+        THEN HEADGOAL (eresolve_tac ctxt [@{thm exE}])
+        THEN HEADGOAL (EqSubst.eqsubst_asm_tac ctxt [2] [@{thm conj_commute}])
+        THEN HEADGOAL (EqSubst.eqsubst_tac ctxt [2] [@{thm conj_commute}])
+        THEN Local_Defs.unfold_tac
           ctxt
-          [@{thm w_def}, Thm.proof_attributes [Calculation.symmetric] @{thm Diff_iff} ctxt |> fst] THEN
-        HEADGOAL (solve_tac ctxt [@{thm someI}])) |>
-    pair \<^binding>\<open>set_neqD\<close> |>
-    Global_Theory.store_thm #>
-    snd
+          [@{thm w_def}, Thm.proof_attributes [Calculation.symmetric] @{thm Diff_iff} ctxt |> fst]
+        THEN HEADGOAL (solve_tac ctxt [@{thm someI}])) |>
+    pair \<^binding>\<open>set_neqD\<close> |> Global_Theory.store_thm #> snd
 \<close>
 
 setup \<open>prove_set_neqD\<close>
@@ -560,10 +555,8 @@ ML \<open>
       \<^prop>\<open>x \<in> {1} \<union> {2} \<Longrightarrow> x \<le> (2 :: int)\<close>
       (fn { context=ctxt, ... } =>
         HEADGOAL (REPEAT_ALL_NEW (eresolve_tac ctxt [@{thm UnE}, @{thm singletonE}])) THEN
-        ALLGOALS (Lin_Arith.tac ctxt)) |>
-    pair \<^binding>\<open>sample1\<close> |>
-    Global_Theory.store_thm #>
-    snd
+        ALLGOALS (Lin_Arith.tac ctxt))
+    |> pair \<^binding>\<open>sample1\<close> |> Global_Theory.store_thm #> snd
 \<close>
 
 setup \<open>prove_sample1\<close>
@@ -583,13 +576,11 @@ ML \<open>
     Goal.prove \<^context> ["x", "y", "A", "B"] []
       \<^prop>\<open>x \<in> A \<Longrightarrow> y \<notin> A \<Longrightarrow> x \<noteq> y\<close>
       (fn { context=ctxt, ... } =>
-        HEADGOAL (Induct_Tacs.case_tac ctxt "x = y" [] NONE) THEN
-        HEADGOAL (hyp_subst_tac ctxt) THEN
-        HEADGOAL (eresolve_tac ctxt [@{thm notE}]) THEN
-        ALLGOALS (assume_tac ctxt)) |>
-    pair \<^binding>\<open>member_neqI\<close> |>
-    Global_Theory.store_thm #>
-    snd
+        HEADGOAL (Induct_Tacs.case_tac ctxt "x = y" [] NONE)
+        THEN HEADGOAL (hyp_subst_tac ctxt)
+        THEN HEADGOAL (eresolve_tac ctxt [@{thm notE}])
+        THEN ALLGOALS (assume_tac ctxt)) |>
+    pair \<^binding>\<open>member_neqI\<close> |> Global_Theory.store_thm #> snd
 \<close>
 
 setup \<open>prove_member_neqI\<close>
@@ -627,9 +618,9 @@ ML \<open>
     Goal.prove \<^context> ["u", "x", "y", "z"] []
       \<^prop>\<open>\<lbrakk>4 < u; u < 6; u \<in> x \<union> y; x \<inter> {5 :: int} \<noteq> {5}; z = {}\<rbrakk> \<Longrightarrow> y - z \<noteq> {}\<close>
       (fn { context=ctxt, ... } =>
-        HEADGOAL (REPEAT_ALL_NEW (eresolve_tac ctxt [@{thm UnE}, make_elim @{thm set_neqD}])) THEN
-        HEADGOAL (REPEAT_ALL_NEW (eresolve_tac ctxt [@{thm disjE}, @{thm conjE}, @{thm IntE}])) THEN
-        HEADGOAL
+        HEADGOAL (REPEAT_ALL_NEW (eresolve_tac ctxt [@{thm UnE}, make_elim @{thm set_neqD}]))
+        THEN HEADGOAL (REPEAT_ALL_NEW (eresolve_tac ctxt [@{thm disjE}, @{thm conjE}, @{thm IntE}]))
+        THEN HEADGOAL
           (RANGE
             [solve_tac ctxt [@{thm notE}],
              EVERY'
@@ -661,9 +652,7 @@ ML \<open>
                      eresolve_tac ctxt [@{thm subst} |> make_elim],
                      assume_tac ctxt,
                      eresolve_tac ctxt [@{thm emptyE}]]]]])) |>
-    pair \<^binding>\<open>sample2\<close> |>
-    Global_Theory.store_thm #>
-    snd
+    pair \<^binding>\<open>sample2\<close> |> Global_Theory.store_thm #> snd
 \<close>
 
 setup \<open>prove_sample2\<close>
