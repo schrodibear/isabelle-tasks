@@ -98,7 +98,7 @@ structure Hilbert_Guess = struct
   \<close>
   fun export0 ctxt vars chyps thm =
     let
-      val gens = split_list vars ||> map (fst o dest_TFree) |> swap
+      val gens = ([], map fst vars)
       val gthm = \<comment> \<open>(1, 2)\<close>
         let
           val phyps = map Thm.term_of chyps
@@ -198,7 +198,11 @@ structure Hilbert_Guess = struct
         |> map_types (map_type_tfree (fn (t, S) => TVar ((t, idx), S)))
       val athm =
         if inter (op =) vars (Term.add_frees prop []) |> null
-        then fold Thm.implies_intr chyps thm |> Conv.fconv_rule (Object_Logic.atomize ctxt) |> rpair ethm |> op CCOMP 
+        then
+          thm |> Conv.fconv_rule (Object_Logic.atomize ctxt)
+          |> fold_rev Thm.implies_intr chyps
+          |> Drule.generalize ([], map fst vars)
+          |> rpair ethm |> op CCOMP
         else export0 ctxt vars chyps thm CCOMP ethm
     in
       Goal.prove ctxt [] [] prop' (HEADGOAL (Object_Logic.full_atomize_tac ctxt THEN' resolve_tac ctxt [athm]) |> K)
@@ -214,7 +218,9 @@ structure Hilbert_Guess = struct
       val (vars, hyps) = dest_premise ctxt ethm |>> map (apfst Name.dest_skolem) ||> map Thm.term_of
       fun exprt goal _ =
         let
-          fun wrap f = if goal then fn thm => Goal.conclude thm |> f |> Goal.protect (Thm.nprems_of thm) else f
+          val protected = case Thm.concl_of thm of \<^const>\<open>Pure.prop\<close> $ _ => true | _ => false
+          fun wrap f =
+            if protected andalso goal then fn thm => Goal.conclude thm |> f |> Goal.protect (Thm.nprems_of thm) else f
         in
           (wrap (export ctxt ethm), export_term ctxt ethm)
         end
@@ -227,6 +233,7 @@ structure Hilbert_Guess = struct
         (binds ~~ hyps |> map (apsnd (rpair []) ##> single #>> rpair pos #>> Binding.make #>> Thm.no_attributes))
       |> snd
       |> rpair st |> Seq.succeed |> Seq.make_results
+      handle ListPair.UnequalLengths => Seq.single (Seq.Error (fn () => "No enough chained facts or hyp names"))
     end
   val meth : (Proof.context -> Method.method) context_parser =
     Scan.lift (Parse.position Parse.thm) >>
