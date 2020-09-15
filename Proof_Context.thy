@@ -38,12 +38,12 @@ structure Util = struct
       |>> Term.rename_wrt_term (Thm.prop_of r)
       ||> pair (Thm.forall_elim_vars (Thm.maxidx_of r + 1) r |> Drule.incr_indexes s)
       ||> `(apfst Thm.prop_of #> unifiers (Context.Theory thy) max #> Seq.hd) ||> apsnd fst
-      ||> `(uncurry Drule.instantiate_normalize) ||> apsnd (fst o fst)
+      ||> `(uncurry instantiate_normalize) ||> apsnd (fst o fst)
       |> (fn (vars, (r, tys)) =>
         vars
         |> map (typ_subst_TVars (map (fst |> apfst ##> Thm.typ_of) tys) |> apsnd #> Free #> Thm.global_cterm_of thy)
-        |> rpair r |-> Drule.forall_intr_list
-        |> rpair (i, s) |> Scan.triple2 |> Drule.compose |> Drule.zero_var_indexes)
+        |> rpair r |-> forall_intr_list
+        |> rpair (i, s) |> Scan.triple2 |> Drule.compose |> zero_var_indexes)
     end
   fun r CCOMP s = r CCOMPN (1, s)
   val id_t = Unsynchronized.ref NONE
@@ -140,7 +140,7 @@ structure Hilbert_Guess = struct
       val frees = map Free vars
       val cfrees = map (Thm.cterm_of ctxt) frees
       val n = length vars
-      val subs = 1 upto n |> map (nth_conv ctxt n #> meta_eq #> Drule.infer_instantiate' ctxt (map SOME cfrees))
+      val subs = 1 upto n |> map (nth_conv ctxt n #> meta_eq #> infer_instantiate' ctxt (map SOME cfrees))
       \<comment> \<open>prop of (3):\<close>
       val gprop = gthm |> Thm.prop_of |> subst_free (map (swap o Logic.dest_equals o Thm.prop_of) subs)
       fun induct k = \<comment> \<open>induction rules for (4)\<close>
@@ -154,7 +154,7 @@ structure Hilbert_Guess = struct
           |> Object_Logic.atomize_term ctxt
           |> Pattern.rewrite_term (Proof_Context.theory_of ctxt) subs []
           |> lambda (Free x) |> Thm.cterm_of ctxt |> SOME |> single
-          |> rpair @{thm prod.induct} |-> Drule.infer_instantiate' ctxt |> Drule.generalize gens
+          |> rpair @{thm prod.induct} |-> infer_instantiate' ctxt |> Drule.generalize gens
         end
       val gthm = \<comment> \<open>(3,4,5)\<close>
         Goal.prove_internal ctxt [] (Thm.cterm_of ctxt gprop)
@@ -185,9 +185,9 @@ structure Hilbert_Guess = struct
                 THEN' resolve_tac ctxt [@{thm refl}]) |> K) |> meta_eq]
        end
     in
-      Drule.instantiate_normalize u gthm \<comment> \<open>(6)\<close>
+      instantiate_normalize u gthm \<comment> \<open>(6)\<close>
       |> rewrite_rule ctxt subs |> curry op RS intro \<comment> \<open>(7)\<close>
-      |> rewrite_rule ctxt (@{thm id__def} :: eps_simps) |> Drule.generalize gens |> Drule.zero_var_indexes \<comment> \<open>(8)\<close>
+      |> rewrite_rule ctxt (@{thm id__def} :: eps_simps) |> Drule.generalize gens |> zero_var_indexes \<comment> \<open>(8)\<close>
     end
   fun dest_premise ctxt ethm =
     let
@@ -271,7 +271,7 @@ structure Hilbert_Guess = struct
   val meth : (Proof.context -> Method.method) context_parser =
     Scan.lift (Parse.position Parse.thm) >> hilbert_guess_meth
   val cmd =
-    Outer_Syntax.command \<^command_keyword>\<open>guess_by_rule\<close> "wild guessing (unstructured)"
+    Outer_Syntax.command \<^command_keyword>\<open>guess_by_rule\<close> "wild guessing using an elimination rule"
       (Parse.position Parse.thm >> (Toplevel.proof o guess_from_rule_cmd))
 end
 \<close>
@@ -407,66 +407,4 @@ proof
   }
   oops
 
-declare [[ML_print_depth=200]]
-
-lemma eqsE[case_names Eqs[AB BC Z]]: obtains A B C where "A = B" "B = C" "0 = 0" by simp
-
-schematic_goal U: "D \<Longrightarrow> ?A = ?C"
-  apply (hilbert_guess eqsE)
-  apply (rule trans[OF AB BC])
-  done
-
-lemma G: "(\<lambda> p. F p) = case_prod (\<lambda> x y. F (x, y))" by simp
-lemma GG: "(SOME x. P x) = (SOME (x, y). P (x, y))" by simp
-
-lemmas t = U[simplified G]
-
-ML \<open> @{thm U} CCOMP @{thm GG}\<close>
-
-ML \<open>\<^term>\<open>SOME (a,b,c). a = b\<close>\<close>
-
-ML \<open>
-let
-  val vars = ["A",  "B", "C"] |> map (rpair \<^typ>\<open>'a\<close>)
-  val subs = vars |> map (`(apfst Name.skolem) #> swap #> apply2 Free)
-  val AB = \<^prop>\<open>A = B\<close> |> subst_free subs |> Thm.cterm_of \<^context>
-  val BC = \<^prop>\<open>B = C\<close> |> subst_free subs |> Thm.cterm_of \<^context>
-  val thmAB = Thm.assume AB
-  val thmBC = Thm.assume BC
-  val thm = Thm.implies_intr \<^cprop>\<open>D\<close> (@{thm trans} OF [thmAB, thmBC])
-
-in
-  Hilbert_Guess.export \<^context> @{thm eqsE} thm
-end
-\<close>
-
-consts A :: "'a \<Rightarrow> 'a \<Rightarrow> bool"
-
-lemma xx:"A (fst (snd (snd (x, y, z, w)))) (fst (snd (snd (x, y, z, w))))" sorry
-lemma yy: "(\<And> a b. P (a, b)) \<Longrightarrow> P p" sorry
-ML \<open>@{thm xx} RSN (1, @{thm yy})\<close>
-
-lemma x: "A (fst (snd (snd (x, y, z, w)))) (fst (snd (snd (x, y, z, w))))" sorry
-ML \<open>@{thm x} CCOMP @{thm prod.induct} CCOMP @{thm prod.induct}\<close>
-
-ML \<open>Elim.nth_conv \<^context> 5 5\<close>
-
-lemma "z = fst (snd (snd (x, y, z, w)))"  apply (tactic \<open>HEADGOAL (Elim.prod_sel_tac \<^context>)\<close>)
-
-thm subset_imageE
-thm someI2
-
-ML \<open>Assumption.add_assms\<close>
-
-lemma set_split[case_names A[t u] B[u t], induct pred]:
-  assumes "t \<noteq> u"
-  obtains
-    (1) x where "x \<in> t" "x \<notin> u" |
-    (2) x where "x \<in> u" "x \<notin> t"
-  using assms by auto
-
-lemma assumes "s \<noteq> t" shows "\<exists> x. x \<in> s - t \<or> x \<in> t - s" using assms proof induct
-  case (A x)
-  from A.t have False
-qed
 end
