@@ -34,7 +34,8 @@ structure Util = struct
       val max = Thm.maxidx_of r + Thm.maxidx_of s + 2
     in
       Logic.get_goal (Thm.prop_of s) i
-      |> pair [] |> perhaps (I ##>> Logic.dest_all #>> swap #>> uncurry cons |> try |> perhaps_loop) |>> rev
+      |> pair [] |> perhaps (I ##>> Logic.dest_all #>> swap #>> uncurry cons |> try |> perhaps_loop)
+      |>> Term.rename_wrt_term (Thm.prop_of r)
       ||> pair (Thm.forall_elim_vars (Thm.maxidx_of r + 1) r |> Drule.incr_indexes s)
       ||> `(apfst Thm.prop_of #> unifiers (Context.Theory thy) max #> Seq.hd) ||> apsnd fst
       ||> `(uncurry Drule.instantiate_normalize) ||> apsnd (fst o fst)
@@ -69,7 +70,7 @@ structure Hilbert_Guess = struct
   fun nth_conv ctxt n k =
     let
       val (xs, Ts) =
-        ("a", Name.aT) |> apply2 (fn s => Name.invent Name.context s n)
+        ("a", Name.aT) |> apply2 (fn s => Name.invent (Variable.names_of ctxt) s n)
         ||> map (rpair (Proof_Context.theory_of ctxt |> Sign.defaultS) #> TFree)
       val ts = xs ~~ Ts |> map Free
       val t = nth ts (k - 1)
@@ -130,7 +131,7 @@ structure Hilbert_Guess = struct
               (HEADGOAL
                 (Object_Logic.atomize_prems_tac ctxt
                  THEN' rewrite_goal_tac ctxt [@{thm conj_assoc}]
-                 THEN' REPEAT_ALL_NEW (ares_tac ctxt [@{thm conjI}])) |> K)
+                 THEN' REPEAT_ALL_NEW (ares_tac ctxt [@{thm conjI}, @{thm TrueI}])) |> K)
         in
           fold_rev Thm.implies_intr chyps thm \<comment> \<open>(1)\<close>
           |> fold (curry op CCOMP) intros |> Thm.implies_intr cconj \<comment> \<open>(2)\<close>
@@ -165,7 +166,7 @@ structure Hilbert_Guess = struct
      val u = \<comment> \<open>instantiation for (6)\<close>
         (gprop, Thm.prop_of gthm) |> apply2 (Logic.dest_implies #> fst)
         |> Util.unifiers (Context.Proof ctxt) (Thm.maxidx_of gthm) |> Seq.hd
-     val eps_simp = \<comment> \<open>rewrite rule for (8)\<close>
+     val eps_simps = \<comment> \<open>optional rewrite rule for (8)\<close>
        let
          val vars' = map (apfst Name.dest_skolem) vars
          val frees' = vars' |> Term.variant_frees (gprop |> subst_free (map (rpair Term.dummy) frees)) |> map Free
@@ -176,12 +177,13 @@ structure Hilbert_Guess = struct
            |> subst_free (frees ~~ frees') |> HOLogic.tupled_lambda (HOLogic.mk_tuple frees')
          val lhs = prop |> lambda (HOLogic.mk_tuple frees |> wrap_id_)
        in
-         Goal.prove ctxt [] [] (HOLogic.mk_eq (lhs, rhs) |> HOLogic.mk_Trueprop)
-           (HEADGOAL
-             (rewrite_goal_tac ctxt (map meta_eq [@{thm split_beta'}, @{thm conj_assoc}])
-              THEN' resolve_tac ctxt [@{thm refl}]) |> K) |> meta_eq
+         if lhs aconv rhs then []
+         else
+           [Goal.prove ctxt [] [] (HOLogic.mk_eq (lhs, rhs) |> HOLogic.mk_Trueprop)
+             (HEADGOAL
+               (rewrite_goal_tac ctxt (map meta_eq [@{thm split_beta'}, @{thm conj_assoc}])
+                THEN' resolve_tac ctxt [@{thm refl}]) |> K) |> meta_eq]
        end
-     val eps_simps = if n = 1 then [] else [eps_simp]
     in
       Drule.instantiate_normalize u gthm \<comment> \<open>(6)\<close>
       |> rewrite_rule ctxt subs |> curry op RS intro \<comment> \<open>(7)\<close>
@@ -257,7 +259,8 @@ structure Hilbert_Guess = struct
   fun guess_from_rule_cmd thm_pos state =
     let
       val ctxt = Proof.context_of state
-      val { exports, fixes, assms } = guess ctxt ctxt thm_pos (Proof.the_facts state)
+      val facts = if can Proof.assert_chain state then Proof.the_facts state else []
+      val { exports, fixes, assms } = guess ctxt ctxt thm_pos facts
     in
       state
       |> Proof.assert_forward_or_chain
@@ -279,7 +282,7 @@ thm wf_asym wfE_min bij_pointE finite_subset_Union int_diff_cases zip_eq_ConsE p
 
 lemma wf_asym': assumes wf: "wf R" shows "asym R" proof (intro asymI)
   fix a b assume "(a, b) \<in> R"
-  with wf show "(b, a) \<notin> R" apply (hilbert_guess  wf_asym[case_names Asym[asym]]) by (rule asym)
+  with wf show "(b, a) \<notin> R" apply (hilbert_guess wf_asym[case_names _[asym]]) by (rule asym)
 qed
 
 lemma wf_asym'':
@@ -289,7 +292,7 @@ lemma wf_asym'':
     "b = c \<Longrightarrow> (c, a) \<in> R \<Longrightarrow> False"
 proof-
   presume ba: "(b, a) \<in> R"
-  from wf ab show False apply (hilbert_guess wf_asym[case_names Asym[asym]]) by (rule cnf.clause2raw_notE[OF ba asym])
+  from wf ab show False apply (hilbert_guess wf_asym[case_names _[asym]]) by (rule cnf.clause2raw_notE[OF ba asym])
   thus False .
 next
   assume "(b, c) \<in> R" "c = a"
@@ -305,10 +308,10 @@ lemma wf_min:
   assumes wf: "wf R" and nonemp: "x \<in> Q"
   shows "\<exists>z\<in>Q.\<forall>y\<in>under R z. y \<notin> Q"
   using wf nonemp
-  apply (hilbert_guess wfE_min[rename_abs z, case_names E[member min]])
+  apply (hilbert_guess wfE_min[rename_abs z, case_names _[member min]])
 proof  (intro bexI[of _ z] ballI impI member)
   fix y assume "y \<in> under R z"
-  hence "(y, z) \<in> R" apply (hilbert_guess underE[case_names Under[prod]]) by (rule prod)
+  hence "(y, z) \<in> R" apply (hilbert_guess underE[case_names _[prod]]) by (rule prod)
   thus "y \<notin> Q" by (rule min)
 qed
 
@@ -316,10 +319,10 @@ lemma wf_min':
   assumes wf: "wf R" and nonemp: "x \<in> Q"
   shows "\<exists>z\<in>Q.\<forall>y\<in>under R z. y \<notin> Q"
   apply (intro bexI)
-  using wf nonemp apply (hilbert_guess wfE_min[rename_abs z, case_names E[member min]])
+  using wf nonemp apply (hilbert_guess wfE_min[rename_abs z, case_names _[member min]])
 proof (intro ballI impI)
   fix y assume "y \<in> under R z"
-  hence "(y, z) \<in> R" apply (hilbert_guess underE[case_names Under[prod]]) by (rule prod)
+  hence "(y, z) \<in> R" apply (hilbert_guess underE[case_names _[prod]]) by (rule prod)
   thus "y \<notin> Q" by (rule min)
 next
   show "z \<in> Q" by (rule member)
@@ -328,11 +331,11 @@ qed
 schematic_goal wf_min'':
   assumes wf: "wf R" and nonemp: "x \<in> Q"
   shows "?z \<in>Q" "\<forall>y\<in>under R ?z. y \<notin> Q"
-  using wf nonemp apply (hilbert_guess wfE_min[case_names E[member min]])
+  using wf nonemp apply (hilbert_guess wfE_min[case_names _[member min]])
    apply (rule member)
 proof (intro ballI impI)
   fix y assume "y \<in> under R z"
-  hence "(y, z) \<in> R" apply (hilbert_guess underE[case_names Under[prod]]) by (rule prod)
+  hence "(y, z) \<in> R" apply (hilbert_guess underE[case_names _[prod]]) by (rule prod)
   thus "y \<notin> Q" by (rule min)
 qed
 
@@ -340,7 +343,7 @@ lemma bij_point:
   assumes bij: "bij f"
   shows "\<exists>!x. y = f x"
 proof (intro ex1I)
-  from bij guess_by_rule bij_pointE[where y=y, rename_abs x, case_names Ex1[ex 1]]
+  from bij guess_by_rule bij_pointE[where y=y, rename_abs x, case_names _[ex 1]]
   from ex show "y = f x" .
   from 1 show "y = f x'  \<Longrightarrow> x' = x" for x' .
 qed
@@ -349,7 +352,7 @@ schematic_goal bij_point':
   assumes bij: "bij f"
   shows "y = f ?x" and "\<And> x'. y = f x'  \<Longrightarrow> x' = ?x"
 proof-
-  from bij guess_by_rule bij_pointE[where y=y, rename_abs x, case_names Ex1[ex 1]]
+  from bij guess_by_rule bij_pointE[where y=y, rename_abs x, case_names _[ex 1]]
   from ex show "y = f x" .
   from 1 show "y = f x'  \<Longrightarrow> x' = x" for x' .
 qed
@@ -358,9 +361,51 @@ lemma bij_point'':
   assumes bij: "bij f"
   shows "\<exists>!x. y = f x"
 proof (intro ex1I)
-  from bij_pointE[where y=y, rename_abs x, case_names Ex1[ex 1]] bij guess x .
+  from bij_pointE bij guess x .
   note Ex = this
   from Ex(1) show "y = f x" oops
+
+lemma finite_subset_Union':
+  assumes "finite A" "A \<subseteq> \<Union> \<B>"
+  obtains \<F> where "finite \<F>" "\<F> \<subseteq> \<B>" "A \<subseteq> \<Union> \<F>"
+proof
+  {
+    from assms guess_by_rule finite_subset_Union[rename_abs \<F>, case_names _[finite sub subset]]
+    thm finite sub subset
+    thus "finite \<F>" "\<F> \<subseteq> \<B>" "A \<subseteq> \<Union> \<F>" .
+  }
+qed
+
+lemma finite_subset_Union'':
+  assumes "finite A" "A \<subseteq> \<Union> \<B>"
+  obtains \<F> where "finite \<F>" "\<F> \<subseteq> \<B>" "A \<subseteq> \<Union> \<F>"
+proof
+  {
+    from finite_subset_Union assms guess \<F> .
+    thus "finite \<F>" "\<F> \<subseteq> \<B>" "A \<subseteq> \<Union> \<F>" oops
+
+lemma int_nats: "\<exists> m n. z = int m - int n"
+  apply (intro exI)
+  apply (hilbert_guess int_diff_cases[rename_abs m n, of z, case_names _[diff]]) thm diff
+  by (rule diff)
+
+lemma ex_tails:
+  assumes "zip xs ys = xy # xys"
+  obtains xs' ys' where "xys = zip xs' ys'"
+proof
+  {
+    from assms guess_by_rule zip_eq_ConsE[rename_abs _ xs' _ ys', case_names _[_ _ _ tails]]
+    from tails show "xys = zip  xs' ys'" .
+  }
+qed
+
+schematic_goal "(?a, ?b) = x"
+proof
+  {
+    guess_by_rule prod_cases[rename_abs a b, of _ x]
+    have "fst (a, b) = fst x \<or> fst (a, b) \<noteq> fst  x" by simp
+  }
+  oops
 
 declare [[ML_print_depth=200]]
 
