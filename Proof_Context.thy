@@ -1,5 +1,6 @@
 theory Proof_Context
   imports Main
+  keywords "guess_by_rule" :: prf_asm % "proof"
 begin
 
 ML \<open>
@@ -78,7 +79,7 @@ structure Hilbert_Guess = struct
       Goal.prove ctxt xs [] (HOLogic.mk_eq (lhs, t) |> HOLogic.mk_Trueprop)
         (HEADGOAL (rewrite_goal_tac ctxt [@{thm id__def}] THEN' prod_sel_tac ctxt) |> K)
     end
-  val nth_conv = fn ctxt => fn n => if n = 1 then K @{thm refl} else nth_conv ctxt n
+  val nth_conv = fn ctxt => fn n => if n = 1 then K (@{thm id__def} RS @{thm meta_eq_to_obj_eq}) else nth_conv ctxt n
   val True_simp = @{lemma "(True \<and> A) = A" by simp} |> meta_eq
   fun conj_elim_tac ctxt = REPEAT_ALL_NEW (eresolve_tac ctxt [@{thm conjE}]) THEN' assume_tac ctxt
   \<comment> \<open>
@@ -99,33 +100,46 @@ structure Hilbert_Guess = struct
   fun export0 ctxt vars chyps thm =
     let
       val gens = ([], map fst vars)
-      val gthm = \<comment> \<open>(1, 2)\<close>
+      val (gthm, intro) = \<comment> \<open>(1, 2)\<close>
         let
           val phyps = map Thm.term_of chyps
+          val ahyps = map (Object_Logic.atomize_term ctxt) phyps
           val pconj =
-            phyps
-            |> map HOLogic.dest_Trueprop
+            ahyps
             |> List.foldl (HOLogic.mk_conj o swap) \<^term>\<open>True\<close>
             |> Raw_Simplifier.rewrite_term (Proof_Context.theory_of ctxt) [True_simp] []
             |> HOLogic.mk_Trueprop
+          val cconj = Thm.cterm_of ctxt pconj
           val intros =
             map
-              (curry Logic.mk_implies pconj
+              (HOLogic.mk_Trueprop
+               #> curry Logic.mk_implies pconj
                #> Thm.cterm_of ctxt
-               #> (rpair (HEADGOAL (conj_elim_tac ctxt) |> K) #-> Goal.prove_internal ctxt [])
-               #> Drule.generalize gens)
-              phyps
-          val cconj = Thm.cterm_of ctxt pconj
+               #> rpair (HEADGOAL (conj_elim_tac ctxt) |> K) #-> Goal.prove_internal ctxt []
+               #> Conv.fconv_rule (Object_Logic.atomize ctxt))
+              ahyps |>
+            rpair (map (curry Logic.mk_implies pconj #> Thm.cterm_of ctxt) phyps) |>
+            op ~~ |>
+            map
+              (fn (a, g) =>
+                Goal.prove_internal ctxt [] g
+                  (HEADGOAL (Object_Logic.full_atomize_tac ctxt THEN' resolve_tac ctxt [a]) |> K)
+                |> curry op RS (Thm.assume cconj))
+          val intro =
+            Goal.prove_internal ctxt [] (List.foldr Logic.mk_implies pconj phyps |> Thm.cterm_of ctxt)
+              (HEADGOAL
+                (Object_Logic.atomize_prems_tac ctxt
+                 THEN' rewrite_goal_tac ctxt [@{thm conj_assoc}]
+                 THEN' REPEAT_ALL_NEW (ares_tac ctxt [@{thm conjI}])) |> K)
         in
           fold_rev Thm.implies_intr chyps thm \<comment> \<open>(1)\<close>
-          |> fold (curry op RS (Thm.assume cconj) oo curry op RS) intros |> Thm.implies_intr cconj \<comment> \<open>(2)\<close>
+          |> fold (curry op CCOMP) intros |> Thm.implies_intr cconj \<comment> \<open>(2)\<close>
+          |> rpair intro
         end
       val frees = map Free vars
       val cfrees = map (Thm.cterm_of ctxt) frees
       val n = length vars
-      val subs =
-        1 upto n |> map (nth_conv ctxt n #> meta_eq #> Drule.infer_instantiate' ctxt (map SOME cfrees))
-        |> filter (pair Drule.reflexive_thm #> Thm.eq_thm_prop #> not)
+      val subs = 1 upto n |> map (nth_conv ctxt n #> meta_eq #> Drule.infer_instantiate' ctxt (map SOME cfrees))
       \<comment> \<open>prop of (3):\<close>
       val gprop = gthm |> Thm.prop_of |> subst_free (map (swap o Logic.dest_equals o Thm.prop_of) subs)
       fun induct k = \<comment> \<open>induction rules for (4)\<close>
@@ -147,7 +161,7 @@ structure Hilbert_Guess = struct
         |> Conv.fconv_rule (Object_Logic.atomize ctxt)
         |> fold_rev Thm.forall_intr cfrees
         |> fold (fn n => fn thm => thm CCOMP induct n) (1 upto n - 1) \<comment> \<open>(4)\<close>
-        |> rpair @{thm mp} |> op COMP |> rpair (2, @{thm someI2}) |> op CCOMPN \<comment> \<open>(5)\<close>
+        |> rpair @{thm mp} |> op CCOMP |> rpair (2, @{thm someI2}) |> op CCOMPN \<comment> \<open>(5)\<close>
      val u = \<comment> \<open>instantiation for (6)\<close>
         (gprop, Thm.prop_of gthm) |> apply2 (Logic.dest_implies #> fst)
         |> Util.unifiers (Context.Proof ctxt) (Thm.maxidx_of gthm) |> Seq.hd
@@ -167,10 +181,11 @@ structure Hilbert_Guess = struct
              (rewrite_goal_tac ctxt (map meta_eq [@{thm split_beta'}, @{thm conj_assoc}])
               THEN' resolve_tac ctxt [@{thm refl}]) |> K) |> meta_eq
        end
+     val eps_simps = if n = 1 then [] else [eps_simp]
     in
       Drule.instantiate_normalize u gthm \<comment> \<open>(6)\<close>
-      |> rewrite_rule ctxt subs |> funpow (length chyps - 1) (curry op RS @{thm conjI}) \<comment> \<open>(7)\<close>
-      |> rewrite_rule ctxt [@{thm id__def}, eps_simp] |> Drule.generalize gens |> Drule.zero_var_indexes \<comment> \<open>(8)\<close>
+      |> rewrite_rule ctxt subs |> curry op RS intro \<comment> \<open>(7)\<close>
+      |> rewrite_rule ctxt (@{thm id__def} :: eps_simps) |> Drule.generalize gens |> Drule.zero_var_indexes \<comment> \<open>(8)\<close>
     end
   fun dest_premise ctxt ethm =
     let
@@ -196,6 +211,7 @@ structure Hilbert_Guess = struct
             then Var ((v, idx), T)
             else Free (v, T) | t => t)
         |> map_types (map_type_tfree (fn (t, S) => TVar ((t, idx), S)))
+      val thm = rewrite_rule ctxt [@{thm prop_def}] thm
       val athm =
         if inter (op =) vars (Term.add_frees prop []) |> null
         then
@@ -205,43 +221,146 @@ structure Hilbert_Guess = struct
           |> rpair ethm |> op CCOMP
         else export0 ctxt vars chyps thm CCOMP ethm
     in
-      Goal.prove ctxt [] [] prop' (HEADGOAL (Object_Logic.full_atomize_tac ctxt THEN' resolve_tac ctxt [athm]) |> K)
+      Goal.prove ctxt [] [] prop'
+        (HEADGOAL
+          (rewrite_goal_tac ctxt [@{thm prop_def}]
+           THEN' Object_Logic.full_atomize_tac ctxt
+           THEN' resolve_tac ctxt [athm]) |> K)
     end
   fun export_term ctxt ethm =
     Thm.cterm_of ctxt #> Thm.reflexive
     #> export ctxt ethm
     #> Thm.prop_of #> Logic.dest_equals #> fst
-  fun hilbert_guess_meth (thm, pos) facts (ctxt, st) =
+  fun guess ctxt' ctxt (thm, pos) facts =
     let
+      val thm = singleton (Attrib.eval_thms ctxt') thm
       val ethm = List.foldl (op CCOMP) thm facts
       val binds = Rule_Cases.get thm |> fst |> the_single |> fst |> snd
       val (vars, hyps) = dest_premise ctxt ethm |>> map (apfst Name.dest_skolem) ||> map Thm.term_of
-      fun exprt goal _ =
-        let
-          val protected = case Thm.concl_of thm of \<^const>\<open>Pure.prop\<close> $ _ => true | _ => false
-          fun wrap f =
-            if protected andalso goal then fn thm => Goal.conclude thm |> f |> Goal.protect (Thm.nprems_of thm) else f
-        in
-          (wrap (export ctxt ethm), export_term ctxt ethm)
-        end
+      fun exports _ _ = (export ctxt ethm, export_term ctxt ethm)
+      val fixes = vars |> map (apfst (rpair pos #> Binding.make) #> apsnd SOME #> rpair NoSyn #> Scan.triple1)
+      val assms =
+        binds ~~ hyps |> map (apsnd (rpair []) ##> single #>> rpair pos #>> Binding.make #>> Thm.no_attributes)
+    in
+      { exports = exports, fixes = fixes, assms = assms }
+    end
+  fun hilbert_guess_meth thm_pos ctxt' facts (ctxt, st) =
+    let
+      val { exports, fixes, assms } = guess ctxt' ctxt thm_pos facts
     in
       ctxt
-      |> Proof_Context.add_fixes
-        (vars |> map (apfst (rpair pos #> Binding.make) #> apsnd SOME #> rpair NoSyn #> Scan.triple1)) |> snd
-      |> Proof_Context.add_assms
-        exprt
-        (binds ~~ hyps |> map (apsnd (rpair []) ##> single #>> rpair pos #>> Binding.make #>> Thm.no_attributes))
-      |> snd
+      |> Proof_Context.add_fixes fixes |> snd
+      |> Proof_Context.add_assms exports assms |> snd
       |> rpair st |> Seq.succeed |> Seq.make_results
-      handle ListPair.UnequalLengths => Seq.single (Seq.Error (fn () => "No enough chained facts or hyp names"))
+    end
+    handle ListPair.UnequalLengths => Seq.single (Seq.Error (fn () => "No enough chained facts or hyp names"))
+  fun guess_from_rule_cmd thm_pos state =
+    let
+      val ctxt = Proof.context_of state
+      val { exports, fixes, assms } = guess ctxt ctxt thm_pos (Proof.the_facts state)
+    in
+      state
+      |> Proof.assert_forward_or_chain
+      |> Proof.enter_forward
+      |> Proof.fix fixes
+      |> Proof.assm exports [] [] assms
     end
   val meth : (Proof.context -> Method.method) context_parser =
-    Scan.lift (Parse.position Parse.thm) >>
-      (fn (thm, pos) => fn ctxt => hilbert_guess_meth (singleton (Attrib.eval_thms ctxt) thm, pos))
+    Scan.lift (Parse.position Parse.thm) >> hilbert_guess_meth
+  val cmd =
+    Outer_Syntax.command \<^command_keyword>\<open>guess_by_rule\<close> "wild guessing (unstructured)"
+      (Parse.position Parse.thm >> (Toplevel.proof o guess_from_rule_cmd))
 end
 \<close>
 
 method_setup hilbert_guess = \<open>Hilbert_Guess.meth\<close> "Elimination into local context"
+
+thm wf_asym wfE_min bij_pointE finite_subset_Union int_diff_cases zip_eq_ConsE prod_cases
+
+lemma wf_asym': assumes wf: "wf R" shows "asym R" proof (intro asymI)
+  fix a b assume "(a, b) \<in> R"
+  with wf show "(b, a) \<notin> R" apply (hilbert_guess  wf_asym[case_names Asym[asym]]) by (rule asym)
+qed
+
+lemma wf_asym'':
+  assumes wf: "wf R" and ab: "(a, b) \<in> R"
+  shows
+    "(b, c) \<in> R \<Longrightarrow> c = a \<Longrightarrow> False"
+    "b = c \<Longrightarrow> (c, a) \<in> R \<Longrightarrow> False"
+proof-
+  presume ba: "(b, a) \<in> R"
+  from wf ab show False apply (hilbert_guess wf_asym[case_names Asym[asym]]) by (rule cnf.clause2raw_notE[OF ba asym])
+  thus False .
+next
+  assume "(b, c) \<in> R" "c = a"
+  thus "(b, a) \<in> R" by (elim subst)
+next
+  assume "b = c" "(c, a) \<in> R"
+  thus "(b, a) \<in> R" by (subst (asm) eq_commute) (elim subst)
+qed
+
+lemma underE: assumes "y \<in> under R z" obtains "(y, z) \<in> R" using assms unfolding under_def by simp
+
+lemma wf_min:
+  assumes wf: "wf R" and nonemp: "x \<in> Q"
+  shows "\<exists>z\<in>Q.\<forall>y\<in>under R z. y \<notin> Q"
+  using wf nonemp
+  apply (hilbert_guess wfE_min[rename_abs z, case_names E[member min]])
+proof  (intro bexI[of _ z] ballI impI member)
+  fix y assume "y \<in> under R z"
+  hence "(y, z) \<in> R" apply (hilbert_guess underE[case_names Under[prod]]) by (rule prod)
+  thus "y \<notin> Q" by (rule min)
+qed
+
+lemma wf_min':
+  assumes wf: "wf R" and nonemp: "x \<in> Q"
+  shows "\<exists>z\<in>Q.\<forall>y\<in>under R z. y \<notin> Q"
+  apply (intro bexI)
+  using wf nonemp apply (hilbert_guess wfE_min[rename_abs z, case_names E[member min]])
+proof (intro ballI impI)
+  fix y assume "y \<in> under R z"
+  hence "(y, z) \<in> R" apply (hilbert_guess underE[case_names Under[prod]]) by (rule prod)
+  thus "y \<notin> Q" by (rule min)
+next
+  show "z \<in> Q" by (rule member)
+qed
+
+schematic_goal wf_min'':
+  assumes wf: "wf R" and nonemp: "x \<in> Q"
+  shows "?z \<in>Q" "\<forall>y\<in>under R ?z. y \<notin> Q"
+  using wf nonemp apply (hilbert_guess wfE_min[case_names E[member min]])
+   apply (rule member)
+proof (intro ballI impI)
+  fix y assume "y \<in> under R z"
+  hence "(y, z) \<in> R" apply (hilbert_guess underE[case_names Under[prod]]) by (rule prod)
+  thus "y \<notin> Q" by (rule min)
+qed
+
+lemma bij_point:
+  assumes bij: "bij f"
+  shows "\<exists>!x. y = f x"
+proof (intro ex1I)
+  from bij guess_by_rule bij_pointE[where y=y, rename_abs x, case_names Ex1[ex 1]]
+  from ex show "y = f x" .
+  from 1 show "y = f x'  \<Longrightarrow> x' = x" for x' .
+qed
+
+schematic_goal bij_point':
+  assumes bij: "bij f"
+  shows "y = f ?x" and "\<And> x'. y = f x'  \<Longrightarrow> x' = ?x"
+proof-
+  from bij guess_by_rule bij_pointE[where y=y, rename_abs x, case_names Ex1[ex 1]]
+  from ex show "y = f x" .
+  from 1 show "y = f x'  \<Longrightarrow> x' = x" for x' .
+qed
+
+lemma bij_point'':
+  assumes bij: "bij f"
+  shows "\<exists>!x. y = f x"
+proof (intro ex1I)
+  from bij_pointE[where y=y, rename_abs x, case_names Ex1[ex 1]] bij guess x .
+  note Ex = this
+  from Ex(1) show "y = f x" oops
 
 declare [[ML_print_depth=200]]
 
