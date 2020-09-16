@@ -1,6 +1,6 @@
 theory Proof_Context
   imports Main
-  keywords "guess_by_rule" :: prf_asm % "proof"
+  keywords "guess_by_rule" :: prf_asm % "proof" and "rule_context" :: thy_defn
 begin
 
 ML \<open>
@@ -82,7 +82,7 @@ structure Hilbert_Guess = struct
     end
   val nth_conv = fn ctxt => fn n => if n = 1 then K (@{thm id__def} RS @{thm meta_eq_to_obj_eq}) else nth_conv ctxt n
   val True_simp = @{lemma "(True \<and> A) = A" by simp} |> meta_eq
-  fun conj_elim_tac ctxt = REPEAT_ALL_NEW (eresolve_tac ctxt [@{thm conjE}]) ORELSE' (K all_tac) THEN' assume_tac ctxt
+  fun conj_elim_tac ctxt = (REPEAT_ALL_NEW (eresolve_tac ctxt [@{thm conjE}]) ORELSE' (K all_tac)) THEN' assume_tac ctxt
   fun maybe_skolem ctxt = Variable.is_body ctxt ? Name.skolem
   fun maybe_dest_skolem ctxt = Variable.is_body ctxt ? Name.dest_skolem
   \<comment> \<open>
@@ -270,11 +270,32 @@ structure Hilbert_Guess = struct
       |> Proof.fix fixes
       |> Proof.assm exports [] [] assms
     end
+  fun rule_context_cmd thm_pos lthy =
+    let
+      val { exports, fixes, assms } = guess lthy lthy thm_pos []
+      val abbrevs =
+        fixes |> map (fn (b, typ, mx) => ((b, mx), Free (Binding.name_of b, the typ) |> snd (exports false [])))
+      val notes = assms |> map (map (fst #> Thm.cterm_of lthy #> Thm.assume #> fst (exports false [])) |> apsnd)
+      fun abbreviate a =
+        Local_Theory.abbrev Syntax.mode_default a #> snd #>
+        (fn lthy =>
+          Local_Theory.map_contexts
+            (Proof_Context.revert_abbrev
+              "" (Binding.name_of (a |> fst |> fst) |> Long_Name.qualify (Named_Target.locale_of lthy |> the)) |> K)
+            lthy)
+    in
+      lthy
+      |> fold abbreviate abbrevs
+      |> fold (snd oo Local_Theory.note) notes
+    end
   val meth : (Proof.context -> Method.method) context_parser =
     Scan.lift (Parse.position Parse.thm) >> hilbert_guess_meth
-  val cmd =
+  val _ =
     Outer_Syntax.command \<^command_keyword>\<open>guess_by_rule\<close> "wild guessing using an elimination rule"
       (Parse.position Parse.thm >> (Toplevel.proof o guess_from_rule_cmd))
+  val _ =
+    Outer_Syntax.command \<^command_keyword>\<open>rule_context\<close> "intoducing declarations from an elimination rule"
+      (Parse.position Parse.thm >> (Toplevel.local_theory NONE NONE o rule_context_cmd))
 end
 \<close>
 
@@ -408,5 +429,13 @@ proof
     have "fst (a, b) = fst x \<or> fst (a, b) \<noteq> fst  x" by simp
   }
   oops
+
+locale empty = fixes a :: int  begin
+rule_context int_diff_cases[of 5, case_names _[diff]]
+lemma u: "m > n" using diff by simp
+end
+
+term empty.n
+thm empty.u
 
 end
