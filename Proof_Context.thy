@@ -82,7 +82,9 @@ structure Hilbert_Guess = struct
     end
   val nth_conv = fn ctxt => fn n => if n = 1 then K (@{thm id__def} RS @{thm meta_eq_to_obj_eq}) else nth_conv ctxt n
   val True_simp = @{lemma "(True \<and> A) = A" by simp} |> meta_eq
-  fun conj_elim_tac ctxt = REPEAT_ALL_NEW (eresolve_tac ctxt [@{thm conjE}]) THEN' assume_tac ctxt
+  fun conj_elim_tac ctxt = REPEAT_ALL_NEW (eresolve_tac ctxt [@{thm conjE}]) ORELSE' (K all_tac) THEN' assume_tac ctxt
+  fun maybe_skolem ctxt = Variable.is_body ctxt ? Name.skolem
+  fun maybe_dest_skolem ctxt = Variable.is_body ctxt ? Name.dest_skolem
   \<comment> \<open>
   Export local theorem \<open>G \<^bold>x\<close> (\<open>thm\<close> over \<open>vars\<close>) valid under \<open>\<^bold>H \<^bold>x\<close> (\<open>chyps\<close>)
   into the global context. Note that \<open>\<^bold>x\<close> \<^emph>\<open>may\<close> occur in \<open>G\<close>, hence the need in all those Hilbert Epsilon tricks.
@@ -168,7 +170,7 @@ structure Hilbert_Guess = struct
         |> Util.unifiers (Context.Proof ctxt) (Thm.maxidx_of gthm) |> Seq.hd
      val eps_simps = \<comment> \<open>optional rewrite rule for (8)\<close>
        let
-         val vars' = map (apfst Name.dest_skolem) vars
+         val vars' = map (maybe_dest_skolem ctxt |> apfst) vars
          val frees' = vars' |> Term.variant_frees (gprop |> subst_free (map (rpair Term.dummy) frees)) |> map Free
          val prop = gprop |> Logic.dest_implies |> fst |> HOLogic.dest_Trueprop
          val rhs =
@@ -193,7 +195,7 @@ structure Hilbert_Guess = struct
     let
       val prem = ethm |> Thm.prems_of |> hd
       val fix_typ = map_type_tvar (TFree o apfst fst)
-      val vars = Logic.strip_params prem |> map (apfst Name.skolem ##> fix_typ)
+      val vars = Logic.strip_params prem |> map (apfst (maybe_skolem ctxt) ##> fix_typ)
       val chyps =
         Logic.strip_assums_hyp prem
         |> map (pair (vars |> rev |> map Free) #> subst_bounds #> map_types fix_typ #> Thm.cterm_of ctxt)
@@ -238,7 +240,7 @@ structure Hilbert_Guess = struct
       val thm = singleton (Attrib.eval_thms ctxt') thm
       val ethm = List.foldl (op CCOMP) thm facts
       val binds = Rule_Cases.get thm |> fst |> the_single |> fst |> snd
-      val (vars, hyps) = dest_premise ctxt ethm |>> map (apfst Name.dest_skolem) ||> map Thm.term_of
+      val (vars, hyps) = dest_premise ctxt ethm |>> map (maybe_dest_skolem ctxt |> apfst) ||> map Thm.term_of
       fun exports _ _ = (export ctxt ethm, export_term ctxt ethm)
       val fixes = vars |> map (apfst (rpair pos #> Binding.make) #> apsnd SOME #> rpair NoSyn #> Scan.triple1)
       val assms =
