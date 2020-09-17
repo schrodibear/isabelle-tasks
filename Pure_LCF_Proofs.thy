@@ -28,7 +28,7 @@ text \<open>
     \<open>?x\<close>) are top-level universally quantified variables. They can be instantiated directly using
     designated Isabelle/ML interfaces e.\,g. \<^ML>\<open>Thm.instantiate'\<close>. This is unlike \<open>bound\<close> variables e.\,g.
     \<open>\<And>x. \<dots> x \<dots>\<close>, where a special theorem (\<open>rule\<close>) has to be employed to instantiate them
-    (e.\,g. \<open>meta_spec\<close>: \mbox{@{thm meta_spec}}).
+    (e.\,g. \<open>meta_spec\<close>:\\ \mbox{@{thm meta_spec}}).
   \<^item> \<open>bound\<close> variables (represented by the \<^ML>\<open>Bound\<close> constructor and displayed in green) are variables that exist
     within a clearly delimited \<open>scope\<close> represented by the \<^ML>\<open>Abs\<close> constructor that corresponds to
     lambda-abstraction. Occurrences of bound variables are designated not by their names, but by
