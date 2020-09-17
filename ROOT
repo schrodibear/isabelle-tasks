@@ -6,5 +6,6 @@ session Tasks (doc) = HOL +
     Theory_Defs
     Forward_Reasoning
     Backward_Reasoning
+    Proof_Context
   document_files
     "root.tex"

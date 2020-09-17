@@ -1,7 +1,38 @@
+(*<*)
 theory Proof_Context
   imports Main
   keywords "guess_by_rule" :: prf_asm % "proof" and "rule_context" :: thy_defn
 begin
+(*>*)
+
+section \<open>Local context, proof stack and local theories\<close>
+
+subsection \<open>Problems\<close>
+
+text \<open>
+  The will-known shape of elimination (but not induction(!)) rules with a single case:\\
+  \<open>A\<^sub>1 \<Longrightarrow> \<dots> \<Longrightarrow> A\<^sub>n \<Longrightarrow> (\<And> \<^bold>x. B\<^sub>1 \<^bold>x \<Longrightarrow> \<dots> \<Longrightarrow> B\<^sub>m \<^bold>x \<Longrightarrow> ?theiss) \<Longrightarrow> ?thesis\<close>\\
+  suggest a quite natural use of these rules as means to enrich the local context with the
+  variables \<open>\<^bold>x\<close> and assumptions \<open>B\<^sub>1 \<^bold>x, \<dots>, B\<^sub>m \<^bold>x\<close> given the facts \<open>A\<^sub>1, \<dots>, A\<^sub>n\<close>. However, there are
+  several limitations the such use of elimination rules in the current implementation of Isabelle/Pure. Notably,
+  obtained variables \<open>\<^bold>x\<close> cannot be used to instantiate schematic variables in the goal during goal refinement.
+  Also, there is no method equivalent of the @{command "obtain"} command, neither there is an equivalent for local
+  theories (to introduce new variables and assumptions into a locale). So to ensure that these limitations are
+  \<^emph>\<open>in fact all purely pragmatic\<close>, let's implement the following features in Isabelle/ML:
+  \<^enum> Implement a forward transformation of theorems depending on the local context obtained from the elimination rule
+    into the external context, even for the case of obtained parameters. Use Hilbert Epsilon-operator to circumvent the
+    limitation (it is part of HOL, not Pure, that is one of the reasons this feature is not part of Isar).
+  \<^enum> Based on that transformation, implement all the desired features: the method to enrich the proof context
+    as provided by the elimination rule as well as the new analogue of the @{command "obtain"} command and
+    the local theory equivalent of it. To simplify the task, do not re-implement the full capabilities of
+    @{command "obtain"}, just extract the necessary names from the @{attribute case_names} attribute and the
+    names of the labmda-bound variables in the rule itself. So the commands would only have just a single argument --
+    the elimination rule. The method and the Isar proof element can also naturally use chained facts to resolve them
+    with the rule assumptions. The local theory command can just require the rule with no assumptions (it can
+    be preliminarily obtained as a separate lemma).
+\<close>
+
+subsection \<open>Solutions (all at once, with tests)\<close>
 
 ML \<open>
 infix 0 CCOMPN CCOMP
@@ -90,15 +121,15 @@ structure Hilbert_Guess = struct
   into the global context. Note that \<open>\<^bold>x\<close> \<^emph>\<open>may\<close> occur in \<open>G\<close>, hence the need in all those Hilbert Epsilon tricks.
   What we want to get is basically \<open>\<^bold>H ?\<^bold>x \<Longrightarrow> G' (\<epsilon>(\<^bold>x) (\<And>\<^bold>H) \<^bold>x))\<close>, where bold font denotes vectors, bold in
   parenthesis denotes tuples and \<open>\<epsilon>\<close> is the Hilbert Epsilon-operator.
-  Here's the basic approach:
-  — (1). \<open>\<^bold>H \<^bold>x \<turnstile> G \<^bold>x \<Longrightarrow> (\<^bold>H \<^bold>x \<Longrightarrow> G \<^bold>x)\<close>
-  — (2). \<open>\<dots> \<Longrightarrow> ((\<And>\<^bold>H) \<^bold>x \<Longrightarrow> G \<^bold>x)\<close>
-  — (3). \<open>\<dots> \<Longrightarrow> ((\<And>\<^bold>H') (\<^bold>x) \<Longrightarrow> G' (\<^bold>x))\<close>
-  — (4). \<open>\<dots> \<Longrightarrow> ((\<And>\<^bold>H') ?x \<Longrightarrow> G' ?x)\<close>
-  — (5). \<open>\<dots> \<Longrightarrow> ((\<And>\<^bold>H') ?x \<Longrightarrow> G' (\<epsilon>x (\<And>\<^bold>H') x))\<close>
-  — (6). \<open>\<dots> \<Longrightarrow> ((\<And>\<^bold>H') (\<^bold>x) \<Longrightarrow> G' (\<epsilon>x (\<And>\<^bold>H') x))\<close>
-  — (7). \<open>\<dots> \<Longrightarrow> (\<^bold>H \<^bold>x \<Longrightarrow> G' (\<epsilon>x (\<And>\<^bold>H') x))\<close>
-  — (8). \<open>\<dots> \<Longrightarrow> (\<^bold>H ?\<^bold>x \<Longrightarrow> G' (\<epsilon>(\<^bold>x) (\<And>\<^bold>H) \<^bold>x))\<close>
+  Here's the basic approach:\\
+  — (1). \<open>\<^bold>H \<^bold>x \<turnstile> G \<^bold>x \<Longrightarrow> (\<^bold>H \<^bold>x \<Longrightarrow> G \<^bold>x)\<close>\\
+  — (2). \<open>\<dots> \<Longrightarrow> ((\<And>\<^bold>H) \<^bold>x \<Longrightarrow> G \<^bold>x)\<close>\\
+  — (3). \<open>\<dots> \<Longrightarrow> ((\<And>\<^bold>H') (\<^bold>x) \<Longrightarrow> G' (\<^bold>x))\<close>\\
+  — (4). \<open>\<dots> \<Longrightarrow> ((\<And>\<^bold>H') ?x \<Longrightarrow> G' ?x)\<close>\\
+  — (5). \<open>\<dots> \<Longrightarrow> ((\<And>\<^bold>H') ?x \<Longrightarrow> G' (\<epsilon>x (\<And>\<^bold>H') x))\<close>\\
+  — (6). \<open>\<dots> \<Longrightarrow> ((\<And>\<^bold>H') (\<^bold>x) \<Longrightarrow> G' (\<epsilon>x (\<And>\<^bold>H') x))\<close>\\
+  — (7). \<open>\<dots> \<Longrightarrow> (\<^bold>H \<^bold>x \<Longrightarrow> G' (\<epsilon>x (\<And>\<^bold>H') x))\<close>\\
+  — (8). \<open>\<dots> \<Longrightarrow> (\<^bold>H ?\<^bold>x \<Longrightarrow> G' (\<epsilon>(\<^bold>x) (\<And>\<^bold>H) \<^bold>x))\<close>\\
   \<close>
   fun export0 ctxt vars chyps thm =
     let
@@ -248,16 +279,22 @@ structure Hilbert_Guess = struct
     in
       { exports = exports, fixes = fixes, assms = assms }
     end
+  structure Ctxt = Proof_Data (type T = Proof.context option fun init _ = NONE)
   fun hilbert_guess_meth thm_pos ctxt' facts (ctxt, st) =
     let
       val { exports, fixes, assms } = guess ctxt' ctxt thm_pos facts
     in
       ctxt
+      |> Ctxt.put (SOME ctxt)
       |> Proof_Context.add_fixes fixes |> snd
       |> Proof_Context.add_assms exports assms |> snd
       |> rpair st |> Seq.succeed |> Seq.make_results
     end
     handle ListPair.UnequalLengths => Seq.single (Seq.Error (fn () => "No enough chained facts or hyp names"))
+  fun export_meth _ _ (ctxt, st) =
+    if can (Thm.prop_of #> Term.no_dummy_patterns) st
+    then TACTIC_CONTEXT ctxt (singleton (Ctxt.get ctxt |> the |> Proof_Context.goal_export ctxt) st |> Seq.single)
+    else Seq.single (Seq.Error (fn () => "Illegal dummy patterns in goal"))
   fun guess_from_rule_cmd thm_pos state =
     let
       val ctxt = Proof.context_of state
@@ -290,6 +327,8 @@ structure Hilbert_Guess = struct
     end
   val meth : (Proof.context -> Method.method) context_parser =
     Scan.lift (Parse.position Parse.thm) >> hilbert_guess_meth
+  val export_meth : (Proof.context -> Method.method) context_parser =
+    Scan.lift (Scan.succeed ()) >> K export_meth
   val _ =
     Outer_Syntax.command \<^command_keyword>\<open>guess_by_rule\<close> "wild guessing using an elimination rule"
       (Parse.position Parse.thm >> (Toplevel.proof o guess_from_rule_cmd))
@@ -300,6 +339,7 @@ end
 \<close>
 
 method_setup hilbert_guess = \<open>Hilbert_Guess.meth\<close> "Elimination into local context"
+method_setup export = \<open>Hilbert_Guess.export_meth\<close> "Preventively export the goal state into the outer context"
 
 thm wf_asym wfE_min bij_pointE finite_subset_Union int_diff_cases zip_eq_ConsE prod_cases
 
@@ -336,7 +376,7 @@ proof  (intro bexI[of _ z] ballI impI member)
   fix y assume "y \<in> under R z"
   hence "(y, z) \<in> R" apply (hilbert_guess underE[case_names _[prod]]) by (rule prod)
   thus "y \<notin> Q" by (rule min)
-qed
+qed export
 
 lemma wf_min':
   assumes wf: "wf R" and nonemp: "x \<in> Q"
@@ -349,7 +389,7 @@ proof (intro ballI impI)
   thus "y \<notin> Q" by (rule min)
 next
   show "z \<in> Q" by (rule member)
-qed
+qed export
 
 schematic_goal wf_min'':
   assumes wf: "wf R" and nonemp: "x \<in> Q"
@@ -409,8 +449,9 @@ proof
 
 lemma int_nats: "\<exists> m n. z = int m - int n"
   apply (intro exI)
-  apply (hilbert_guess int_diff_cases[rename_abs m n, of z, case_names _[diff]]) thm diff
-  by (rule diff)
+  apply (hilbert_guess int_diff_cases[rename_abs m n, of z, case_names _[diff]])
+  apply (rule diff)
+  by export
 
 lemma ex_tails:
   assumes "zip xs ys = xy # xys"
@@ -438,4 +479,6 @@ end
 term empty.n
 thm empty.u
 
+(*<*)
 end
+(*>*)
