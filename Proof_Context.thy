@@ -343,10 +343,10 @@ method_setup export = \<open>Hilbert_Guess.export_meth\<close> "Preventively exp
 
 thm wf_asym wfE_min bij_pointE finite_subset_Union int_diff_cases zip_eq_ConsE prod_cases
 
-lemma wf_asym': assumes wf: "wf R" shows "asym R" proof (intro asymI)
+lemma wf_asym': assumes irrefl: "irrefl R" and wf: "wf R" shows "asym R" proof (intro asymI)
   fix a b assume "(a, b) \<in> R"
   with wf show "(b, a) \<notin> R" apply (hilbert_guess wf_asym[case_names _[asym]]) by (rule asym)
-qed
+qed (rule irrefl)
 
 lemma wf_asym'':
   assumes wf: "wf R" and ab: "(a, b) \<in> R"
