@@ -194,8 +194,10 @@ text \<open>
       while, say, potential occurrences of \<open>i\<close> in \<open>S\<close> will be recognized as \<^emph>\<open>free\<close>. In fact, most free-form
       user-defined translations are produced by the command @{command translations}, which defines the rules for
       the transformation of the untyped AST. Now one another very important notice:
-      Untyped translations are attached to \<^emph>\<open>constants\<close> and are applied to the resulting AST
-      \<^emph>\<open>from left to right\<close> \<^emph>\<open>until a fix-point\<close> is reached i.\,e. there are no more translations defined for any
+      Untyped translation \<^emph>\<open>rules\<close> are attached to \<^emph>\<open>constants\<close> and are applied to the resulting AST
+      \<^emph>\<open>from left to right\<close>\<^footnote>\<open>The actual order is called ``yo-yo-like'':
+        top-down, then bottom-up, then again top-down etc.\<close>
+      \<^emph>\<open>until a fix-point\<close> is reached i.\,e. there are no more translations defined for any
       of the constants occurring in the AST. The reasons for that are purely pragmatic as this makes it very
       easy to program different transformations with unbound number of arguments, such as various syntaxes for
       lists, sets, records, currified function applications etc. Therefore the translations \<^emph>\<open>should not\<close> normally
@@ -204,15 +206,18 @@ text \<open>
       in the untyped AST and is then immediately translated into the actual constant, thus ensuring the corresponding
       translation rule is not applicable anymore. Syntactic constant names usually start with either an underscore
       or a special control prefix such as \<open>\<^const>\<close> or \<open>\<^typ>\<close>. Some of the syntactic constants are not handled at this
-      stage and survive AST translation
-      up to the next stage (see below), since the general approach to translation there (the application
-      of translations until fixpoint) is similar.
+      stage and survive AST translation up to the next stage. There is also support for free-form untyped
+      AST translations defined in ML (so-called \<^emph>\<open>parse AST translations\<close>),
+      but they are handled differently and are more similar to \<^emph>\<open>term translations\<close>.
     \<^item> \<^emph>\<open>Term translation\<close> stage. Interestingly, this parsing stage is \<^emph>\<open>also untyped\<close>. However, the AST is already
       represented using the usual general \<^ML_type>\<open>term\<close> datatype of Isabelle/Pure. In particular, type constraints
       are still represented using the special constant \<open>_constraint\<close> and the actual types are replaced with dummy
       placeholders (\<^ML>\<open>Term.dummyT\<close>). The term translations (a.k.a simply \<open>parse translations\<close>) are also attached to
-      constant symbols and are handled similarily to untyped AST translations (a.k.a \<open>parse AST translations\<close>) i.\,e.
-      \<^emph>\<open>left-to-right\<close> and \<^emph>\<open>until fixpoint\<close> is reached. Unlike AST translations that are mostly used for very simple
+      constants, but are \<^emph>\<open>not\<close> handled until fix-point. The translation functions are simply called in the bottom-up
+      traversal order and should take proper care about possible recursive invocations on their own. To perform such
+      recursive invocation of a rule the following interface provided by Isabelle/ML can be used:
+      \<open>Syntax.parse_translation (Proof_Context.syn_of ctxt) \<^syntax_const>\<open>_const\<close>\<close>.
+      Unlike AST translations that are mostly used for very simple
       free-form translation rules, term translations are mostly used for \<^emph>\<open>complex\<close> parsing transformations that are
       programmed by hand in ML e.\,g. list and set comprehension syntaxes,
       encoding of numbers into the canonical binary representation and convenient lamda-abstractions with
