@@ -39,6 +39,7 @@ term "\<forall>y :: nat \<noteq> 0. y dvd (x + d) * y"
 abbreviation (output) "All_neq y P \<equiv> \<forall>x. x \<noteq> y \<longrightarrow> P x"
 translations "\<forall>x\<noteq>y. P" \<leftharpoondown> "CONST All_neq y (\<lambda> x. P)"
 term "\<forall>y :: nat \<noteq> 0. y dvd (x + d) * y"
+
 (*<*)
 end
 (*>*)

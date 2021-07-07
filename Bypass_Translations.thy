@@ -19,7 +19,7 @@ structure Bypass_Translations : BYPASS_TRANSLATIONS = struct
     else
       map
         (map_aterms
-          (fn t as Const (c, T)=>
+          (fn t as Const (c, T) =>
                 if strip_type T |> swap |-> cons |> forall (curry op <> \<^typ>\<open>prop\<close>) then
                   Const (prefix bypass_prefix c, T)
                 else t
@@ -56,13 +56,12 @@ translations "\<Sum>x\<leftarrow>xs. b" \<leftharpoondown>"CONST Sum_list x b xs
 
 lemma "{u. P u} = {(a, b) | a b. P (a, b)}" using [[show_abbrevs=false, bypass_translations=true]] oops
 
-term "finite X \<Longrightarrow> (\<Sum>x\<in>X. \<Sum>y\<leftarrow>ys. f x y) = (\<Sum>y\<leftarrow>ys. \<Sum>x\<in>X. f x y)"
-term "Trueprop ({u. P u} = {(a, b) | a b. P (a, b)})"
-
+prop "finite X \<Longrightarrow> (\<Sum>x\<in>X. \<Sum>y\<leftarrow>ys. f x y) = (\<Sum>y\<leftarrow>ys. \<Sum>x\<in>X. f x y)"
+prop "{u. P u} = {(a, b) | a b. P (a, b)}"
 
 declare [[show_abbrevs=false, bypass_translations=true]]
 
-term "finite X \<Longrightarrow> (\<Sum>x\<in>X. \<Sum>y\<leftarrow>ys. f x y) = (\<Sum>y\<leftarrow>ys. \<Sum>x\<in>X. f x y)"
-term "Trueprop ({u. P u} = {(a, b) | a b. P (a, b)})"
+prop "finite X \<Longrightarrow> (\<Sum>x\<in>X. \<Sum>y\<leftarrow>ys. f x y) = (\<Sum>y\<leftarrow>ys. \<Sum>x\<in>X. f x y)"
+prop "{u. P u} = {(a, b) | a b. P (a, b)}"
 
 end
