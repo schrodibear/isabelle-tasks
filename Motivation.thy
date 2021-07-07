@@ -183,8 +183,8 @@ proof (induct X rule: finite_induct)
 next
   case (insert x X)
   from insert(1,2) have "(\<Sum>x\<in>insert x X. \<Sum>y\<leftarrow>ys. f x y) = (\<Sum>y\<leftarrow>ys. f x y) + (\<Sum>x\<in>X. \<Sum>y\<leftarrow>ys. f x y)" by simp
-  also from insert(3) have "... = (\<Sum>y\<leftarrow>ys. f x y) + (\<Sum>y\<leftarrow>ys. \<Sum>x\<in>X. f x y)" by simp
-  also from insert(1,2) have "... = (\<Sum>y\<leftarrow>ys. \<Sum>x\<in>insert x X. f x y)" by (simp add: sum_list_addf)
+  also from insert(3) have "\<dots> = (\<Sum>y\<leftarrow>ys. f x y) + (\<Sum>y\<leftarrow>ys. \<Sum>x\<in>X. f x y)" by simp
+  also from insert(1,2) have "\<dots> = (\<Sum>y\<leftarrow>ys. \<Sum>x\<in>insert x X. f x y)" by (simp add: sum_list_addf)
   finally show ?case .
 qed
 
