@@ -55,8 +55,8 @@ in
     |> rpair (conj_comm \<^cprop>\<open>PROP B &&& PROP A\<close> \<^cprop>\<open>PROP C\<close>)
     |-> Thm.transitive
   \<comment> \<open>For later use\<close>
-  val conj_comm = conj_comm \<^cprop>\<open>PROP A\<close> \<^cprop>\<open>PROP B\<close> |> Drule.generalize ([], ["A", "B"])
-  val conj_assoc = conj_assoc \<^cprop>\<open>PROP A\<close> \<^cprop>\<open>PROP B\<close> \<^cprop>\<open>PROP C\<close> |> Drule.generalize ([], ["A", "B", "C"])
+  val conj_comm = conj_comm \<^cprop>\<open>PROP A\<close> \<^cprop>\<open>PROP B\<close> |> Drule.export_without_context
+  val conj_assoc = conj_assoc \<^cprop>\<open>PROP A\<close> \<^cprop>\<open>PROP B\<close> \<^cprop>\<open>PROP C\<close> |> Drule.export_without_context
 end
 \<close>
 
@@ -71,7 +71,7 @@ ML \<open>
   val cong =
     Conjunction.cong (Thm.assume \<^cprop>\<open>PROP A \<equiv> PROP B\<close>) (Thm.assume \<^cprop>\<open>PROP C \<equiv> PROP D\<close>)
     |> Thm.implies_intr \<^cprop>\<open>PROP C \<equiv> PROP D\<close> |> Thm.implies_intr \<^cprop>\<open>PROP A \<equiv> PROP B\<close>
-    |> Drule.generalize ([], ["A", "B", "C", "D"])
+    |> Drule.export_without_context
 
   fun inst thm tys vars = Drule.instantiate'_normalize (map SOME tys) (map SOME vars) thm
   val imps = List.foldl (uncurry Thm.implies_elim o swap)
@@ -97,13 +97,9 @@ ML \<open>
 
 text \<open>Modular, reliable, regular, well-structured\<dots> But too many noisy instantiations, can't be they automated?\<close>
 
-setup \<open>
+ML \<open>
   Thm.combination (Thm.reflexive \<^cterm>\<open>P :: 'a \<Rightarrow> prop\<close>) (Thm.assume \<^cprop>\<open>x \<equiv> y\<close>)
-  |> Thm.implies_intr \<^cprop>\<open>x \<equiv> y\<close> |> Drule.generalize (["'a"], ["P", "x", "y"])
-  |> pair \<^binding>\<open>substitutivity\<close>
-  |> Thm.no_attributes
-  |> Global_Theory.add_thm
-  #> snd
+  |> Thm.implies_intr \<^cprop>\<open>x \<equiv> y\<close> |> Drule.store_standard_thm \<^binding>\<open>substitutivity\<close>
 \<close>
 
 experiment begin
