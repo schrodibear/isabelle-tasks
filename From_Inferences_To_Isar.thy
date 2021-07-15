@@ -104,6 +104,8 @@ ML \<open>
 
 experiment begin
 
+thm asm_rl[where psi="PROP B &&& PROP A \<Longrightarrow> PROP A &&& PROP B" for A B, OF conjunctionI[OF conjunctionD2 conjunctionD1]]
+
 lemma conjunction_comm: "(PROP A &&& PROP B) \<equiv> (PROP B &&& PROP A)"
   using equal_intr_rule[OF conjunctionI[OF conjunctionD2 conjunctionD1] conjunctionI[OF conjunctionD2 conjunctionD1]] .
 
@@ -114,8 +116,7 @@ lemmas I = conjunctionI
 lemma conjunction_assoc: "(PROP A &&& PROP B &&& PROP C) \<equiv> ((PROP A &&& PROP B) &&& PROP C)"
   using equal_intr_rule[OF I[OF I[OF D1 D2[THEN D1]] D2[THEN D2]] I[OF D1[THEN D1] I[OF D1[THEN D2] D2]]] .
 
-lemma subst_left: "\<lbrakk>x \<equiv> y; P y \<equiv> Q\<rbrakk> \<Longrightarrow> PROP P x \<equiv> Q"
-  using equal_elim_rule2[OF substitutivity[where P="\<lambda>x. (PROP P x \<equiv> Q)"]] .
+lemma subst_left: "\<lbrakk>x \<equiv> y; P y \<equiv> Q\<rbrakk> \<Longrightarrow> PROP P x \<equiv> Q" using equal_elim_rule2[OF substitutivity] .
 
 lemma "(PROP A &&& PROP B &&& PROP C) \<equiv> (PROP C &&& PROP B &&& PROP A)"
   using subst_left[OF conjunction_assoc subst_left[OF conjunction_comm, THEN subst_left[OF conjunction_comm]]] .
