@@ -19,4 +19,13 @@ lemma spec: "\<forall>x. P x \<Longrightarrow> P x" using
 
 lemma "x \<in> {1 :: int} \<union> {2} \<Longrightarrow> x = 1 \<or> x = 2" ML_prf \<open>Config.put Blast.trace true |> Context.map_proof |> Context.>>\<close>
   by blast
+
+context
+  fixes wf_subst eval M Z F const \<sigma> B y a
+  assumes rule1: "\<forall>\<sigma>. wf_subst \<sigma> \<longrightarrow> eval M Z \<sigma> F = B True" and rule2: "wf_subst (\<lambda>v. if v = y then const a else \<sigma> v)"
+begin
+lemmas rule0 = spec[where P="\<lambda> x. P x \<longrightarrow> Q x" for P Q, THEN mp]
+thm rule0[OF rule1, OF rule2]
+thm rule0[OF rule1 rule2]
+end
 end
