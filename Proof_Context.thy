@@ -1,6 +1,6 @@
 (*<*)
 theory Proof_Context
-  imports Main
+  imports Main "Pure-ex.Guess"
   keywords "guess_by_rule" :: prf_asm % "proof" and "rule_context" :: thy_defn
 begin
 (*>*)
@@ -50,29 +50,32 @@ structure Util = struct
     Unify.unifiers (context, Envir.empty max, [(t1, t2)])
     |> Seq.map
       (fn (e as Envir.Envir { tyenv, tenv, ... }, _) =>
-        (tyenv |> Vartab.dest |>
-         map
-           (fn (xi, (S, T)) =>
-             ((xi, S), T |> Envir.norm_type tyenv |> Context.cases Thm.global_ctyp_of Thm.ctyp_of context)),
-         tenv |> Vartab.dest |>
-         map
-           (fn (xi, (T, t)) =>
-             ((xi, Envir.norm_type tyenv T),
-              Envir.norm_term e t |> Context.cases Thm.global_cterm_of Thm.cterm_of context))))
+        (tyenv
+         |> Vartab.fold
+              (fn (T, (S, U)) =>
+                TVars.add ((T, S), Envir.norm_type tyenv U |> Context.cases Thm.global_ctyp_of Thm.ctyp_of context))
+         |> TVars.build,
+         tenv
+         |> Vartab.fold
+              (fn (xi, (T, t)) =>
+                Vars.add
+                  ((xi, Envir.norm_type tyenv T),
+                   Envir.norm_term e t |> Context.cases Thm.global_cterm_of Thm.cterm_of context))
+         |> Vars.build))
   fun r CCOMPN (i, s) =
     let
       val thy = super_thy_of (r, s)
       val max = Thm.maxidx_of r + Thm.maxidx_of s + 2
     in
       Logic.get_goal (Thm.prop_of s) i
-      |> pair [] |> perhaps (I ##>> Logic.dest_all #>> swap #>> uncurry cons |> try |> perhaps_loop)
+      |> pair [] |> perhaps (I ##>> Logic.dest_all_global #>> swap #>> uncurry cons |> try |> perhaps_loop)
       |>> Term.rename_wrt_term (Thm.prop_of r)
       ||> pair (Thm.forall_elim_vars (Thm.maxidx_of r + 1) r |> Drule.incr_indexes s)
       ||> `(apfst Thm.prop_of #> unifiers (Context.Theory thy) max #> Seq.hd) ||> apsnd fst
       ||> `(uncurry instantiate_normalize) ||> apsnd (fst o fst)
       |> (fn (vars, (r, tys)) =>
         vars
-        |> map (typ_subst_TVars (map (fst |> apfst ##> Thm.typ_of) tys) |> apsnd #> Free #> Thm.global_cterm_of thy)
+        |> map (Term_Subst.instantiateT (TVars.map (K Thm.typ_of) tys) |> apsnd #> Free #> Thm.global_cterm_of thy)
         |> rpair r |-> forall_intr_list
         |> rpair (i, s) |> Scan.triple2 |> Drule.compose |> zero_var_indexes)
     end
@@ -133,7 +136,7 @@ structure Hilbert_Guess = struct
   \<close>
   fun export0 ctxt vars chyps thm =
     let
-      val gens = ([], map fst vars)
+      val gens = (Names.empty, map fst vars |> Names.make_set)
       val (gthm, intro) = \<comment> \<open>(1, 2)\<close>
         let
           val phyps = map Thm.term_of chyps
@@ -252,7 +255,7 @@ structure Hilbert_Guess = struct
         then
           thm |> Conv.fconv_rule (Object_Logic.atomize ctxt)
           |> fold_rev Thm.implies_intr chyps
-          |> Drule.generalize ([], map fst vars)
+          |> Drule.generalize (Names.empty, map fst vars |> Names.make_set)
           |> rpair ethm |> op CCOMP
         else export0 ctxt vars chyps thm CCOMP ethm
     in

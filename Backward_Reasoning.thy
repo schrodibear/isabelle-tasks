@@ -491,7 +491,7 @@ text \<open>
     the corresponding proof tree can be found in the paper \<open>Calogero G. Zarba. Combining Sets with Elements\<close> on page
     \<open>13\<close>. Use tactical reasoning and structure the proof tree using the \<^ML>\<open>RANGE\<close> and \<^ML>\<open>EVERY'\<close> tacticals.
 
-You can help yourself by using tactical reasoning in Isabelle GUI with commands @{command apply} and @{command by}.
+You can help yourself by using tactical reasoning in Isabelle GUI with commands @{command apply} and @{command "by"}.
 Also, a special tactic @{method tactic} can be used to apply a tactic implemented in pure ML e.\,g.:
 \<close>
 lemma "A \<Longrightarrow> A" apply (tactic \<open>HEADGOAL (assume_tac \<^context>)\<close>) done

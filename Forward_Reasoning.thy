@@ -554,7 +554,7 @@ ML \<open>
       |> rpair (Thm.assume asm)
       |-> Thm.combination
       |> Thm.implies_intr asm
-      |> Drule.generalize (["'a"], ["P", "x", "y"])
+      |> Drule.generalize (Names.make_set ["'a"], Names.make_set ["P", "x", "y"])
     end
 \<close>
 
@@ -609,7 +609,7 @@ ML \<open>
       val nnf_simp =
         @{thm HOL.nnf_simps(5)}
         |> Drule.instantiate'_normalize [] [SOME \<^cterm>\<open>P x :: bool\<close>, SOME \<^cterm>\<open>Q x :: bool\<close>]
-        |> Drule.generalize ([], ["P", "Q"])
+        |> Drule.generalize (Names.empty, Names.make_set ["P", "Q"])
         |> meta_eq
         |> Thm.abstract_rule "x" \<^cterm>\<open>x\<close>
       val conj_commute =
@@ -633,7 +633,7 @@ ML \<open>
       |> subst_all \<^context> diff
       |> subst_all \<^context> (@{thm w_def} |> Thm.symmetric)
       |> Thm.implies_intr asm
-      |> Drule.generalize (["'a"], ["s", "t"]) |> Drule.zero_var_indexes
+      |> Drule.generalize (Names.make_set ["'a"], Names.make_set ["s", "t"]) |> Drule.zero_var_indexes
       |> pair \<^binding>\<open>set_neqD\<close> |> Global_Theory.store_thm #> snd
     end
 \<close>
@@ -675,7 +675,7 @@ ML \<open>
         |> Thm.equal_elim (@{thm atomize_not} |>  Drule.instantiate'_normalize [] [SOME \<^cterm>\<open>(2 :: int) < x\<close>])
         |> Thm.implies_intr in_Un
         |> subst_all \<^context> @{thm not_less}
-        |> Drule.generalize ([], ["x"]) |> Drule.zero_var_indexes
+        |> Drule.generalize (Names.empty, Names.make_set ["x"]) |> Drule.zero_var_indexes
     in
       thm |> pair \<^binding>\<open>sample1\<close> |> Global_Theory.store_thm #> snd
     end

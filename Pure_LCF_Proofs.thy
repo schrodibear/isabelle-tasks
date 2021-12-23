@@ -580,7 +580,7 @@ ML \<open>
       val thm =
         Thm.equal_intr elim intro
         |> Thm.implies_intr excl_mid
-        |> Drule.generalize ([], ["A"])
+        |> Drule.generalize (Names.empty, Names.make_set ["A"])
     in
       (\<^binding>\<open>double_negation\<close>, thm)
       |> Global_Theory.store_thm
@@ -612,12 +612,12 @@ ML \<open>
       |-> Thm.combination
       |> Thm.symmetric
       |> Conv.fconv_rule (Thm.beta_conversion true)
-      |> Drule.generalize ([], ["A"])
+      |> Drule.generalize (Names.empty, Names.make_set ["A"])
       |> rpair (Global_Theory.get_thm thy "double_negation")
       |-> Thm.equal_elim
       |> Thm.implies_intr or_def
       |> Thm.implies_intr neg_def
-      |> Drule.generalize ([], ["or", "neg"])
+      |> Drule.generalize (Names.empty, Names.make_set ["or", "neg"])
       |> pair \<^binding>\<open>double_negation_eqs\<close>
       |> rpair thy
       |-> Global_Theory.store_thm

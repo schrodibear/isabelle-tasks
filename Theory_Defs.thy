@@ -315,8 +315,9 @@ text \<open>
   \<^bigskip>
 
   \marginsymbol
-  \<^ML_text>\<open>val\<close> \<^ML>\<open>Sign.add_syntax\<close>\\
+  \<^ML_text>\<open>val\<close> \<^ML>\<open>Sign.syntax\<close>\\
   \tab\begin{tabular}{ll}
+  (\<open>add\<close> : \<^ML_type>\<open>bool\<close>)\\
   (\<open>mode\<close> : \<^ML_type>\<open>Syntax.mode\<close>)\\
   (\<open>consts\<close> : \<^ML_type>\<open>(string * typ * mixfix) list\<close>)\\
   (\<open>thy\<close> : \<^ML_type>\<open>theory\<close>) :\\
@@ -384,8 +385,8 @@ text \<open>
   \end{tabular}\\
   The main Isabelle/ML interfaces of the parsing/printing pipeline (on a global theory level). The semantics of
   the interfaces should be more or less intuitive based on the general description given above. Here
-  it only worth noting the peculiar relationship between the syntax and typing in the \<^ML>\<open>Sign.add_syntax\<close> interface and
-  some elaboration about the \<^ML>\<open>Sign.typed_print_translation\<close>. The mixfix annotations specified in \<^ML>\<open>Sign.add_syntax\<close>
+  it only worth noting the peculiar relationship between the syntax and typing in the \<^ML>\<open>Sign.syntax\<close> interface and
+  some elaboration about the \<^ML>\<open>Sign.typed_print_translation\<close>. The mixfix annotations specified in \<^ML>\<open>Sign.syntax\<close>
   only define the \<^emph>\<open>priorities\<close> \<open>p\<close> of the corresponding grammar rules. However, to fully determine the rules we
   need the full non-terminals represented by pairs \<open>nonterm\<^bsup>(p)\<^esup>\<close>. The non-terminal (\<open>nonterm\<close>) itself is determined
   from the \<^emph>\<open>semi-syntactic\<close> type of the constant. This type can include both normal Isabelle types such as
@@ -400,13 +401,13 @@ text \<open>
   be instantiated with that type, it has to be parsed differently. The reason for using the special \<open>PROP\<close> construct
   is the same. This enables slightly more flexibility in defining the syntax of the object logics such as HOL by
   avoiding some grammar conflicts near the boundaries of the object logic terms, namely the object-level term
-  cannot span over the meta-connectives such as \<open>\<Longrightarrow>\<close>. \<^ML>\<open>Sign.add_syntax\<close> can add syntax for both normal (logic)
+  cannot span over the meta-connectives such as \<open>\<Longrightarrow>\<close>. \<^ML>\<open>Sign.syntax\<close> can add syntax for both normal (logic)
   as well as syntactic constants (that are to be translated later down the pipeline). \<^ML>\<open>Sign.notation\<close> is very
-  similar to \<^ML>\<open>Sign.add_syntax\<close>, albeit it is adapted for adding \<^emph>\<open>or deleting\<close> (according to the
+  similar to \<^ML>\<open>Sign.syntax\<close>, albeit it is adapted for adding \<^emph>\<open>or deleting\<close> (according to the
   \<open>add\<close> parameter) the syntax for already existing
   constants by automatically translating logic constants (registered in the theory context) into their syntactic
-  counterparts. Internally, both \<^ML>\<open>Sign.add_syntax\<close> and \<^ML>\<open>Sign.notation\<close> use the same interfaces, so no error
-  is expected if \<^ML>\<open>Sign.add_syntax\<close> is misused for adding a notation for existing constant or vise versa. Another
+  counterparts. Internally, both \<^ML>\<open>Sign.syntax\<close> and \<^ML>\<open>Sign.notation\<close> use the same interfaces, so no error
+  is expected if \<^ML>\<open>Sign.syntax\<close> is misused for adding a notation for existing constant or vise versa. Another
   notable detail is that the type in \<^ML>\<open>Sign.typed_print_translation\<close> is the type of the \<^emph>\<open>constant\<close>, not the term
   formed by its application to the arguments. Typed print translations are analogous to the usual print translations,
   only different in the fact they are applied before the end of the uncheck phase, where types in Isabelle terms
@@ -435,7 +436,7 @@ text \<open>
   \<^ML_type>\<open>typ\<close>
   \end{tabular}\\
   A convenience function for reading (parsing) the \<^emph>\<open>semi-syntactic\<close> types used for specifying the type of syntactic
-  constants (particularly, when invoking \<^ML>\<open>Sign.add_syntax\<close>).
+  constants (particularly, when invoking \<^ML>\<open>Sign.syntax\<close>).
 \<close>
 text \<open>
 
@@ -639,7 +640,7 @@ subsubsection \<open>Problem 2\<close>
 
 setup \<open>
    Thm.add_axiom_global (\<^binding>\<open>excl_mid\<close>, \<^term>\<open>\<And>P. PROP P \<or> \<not> PROP P\<close>)
-   #>> apsnd (Thm.forall_elim \<^cterm>\<open>PROP P\<close> #> Drule.generalize ([], ["P"]))
+   #>> apsnd (Thm.forall_elim \<^cterm>\<open>PROP P\<close> #> Drule.generalize (Names.empty, Names.make_set ["P"]))
    #>> apfst (K \<^binding>\<open>excl_mid\<close>)
    #>> Thm.no_attributes
    #-> Global_Theory.add_thm
@@ -674,7 +675,7 @@ ML \<open>
         |> rewrite_rule \<^context> [@{thm neg_def} |> Thm.symmetric]
     in
       Thm.equal_intr ltr rtl
-      |> Drule.generalize ([], ["A"])
+      |> Drule.generalize (Names.empty, Names.make_set ["A"])
       |> pair \<^binding>\<open>double_negation\<close>
       |> Thm.no_attributes
       |> Global_Theory.add_thm
@@ -700,7 +701,7 @@ setup \<open>
 setup \<open>
    Sign.declare_const_global ((\<^binding>\<open>Collect\<close>, \<^typ>\<open>('a \<Rightarrow> prop) \<Rightarrow> 'a set\<close>), NoSyn)
    #> snd
-   #> Sign.add_syntax
+   #> Sign.syntax true
      Syntax.mode_default
      [("_Collect",
        Proof_Context.read_typ_syntax \<^context> "pttrn \<Rightarrow> any \<Rightarrow> 'a set",
@@ -724,7 +725,7 @@ setup \<open>
    #>> apsnd
      (Thm.forall_elim \<^cterm>\<open>S :: _ \<Rightarrow> prop\<close>
       #> Thm.forall_elim \<^cterm>\<open>x\<close>
-      #> Drule.generalize (["'a"], ["S", "x"]))
+      #> Drule.generalize (Names.make_set ["'a"], Names.make_set ["S", "x"]))
    #>> apfst (K \<^binding>\<open>elem\<close>)
    #>> Thm.no_attributes
    #-> Global_Theory.add_thm
@@ -736,7 +737,7 @@ setup \<open>
    #>> apsnd
      (Thm.forall_elim \<^cterm>\<open>S :: _ set\<close>
       #> Thm.forall_elim \<^cterm>\<open>x :: 'b\<close>
-      #> Drule.generalize (["'a"], ["S", "x"]))
+      #> Drule.generalize (Names.make_set ["'a"], Names.make_set ["S", "x"]))
    #>> apfst (K \<^binding>\<open>set\<close>)
    #>> Thm.no_attributes
    #-> Global_Theory.add_thm
@@ -758,14 +759,14 @@ ML \<open>
     ||> Thm.instantiate' [SOME \<^ctyp>\<open>'a\<close>] [SOME \<^cterm>\<open>A :: 'a set\<close>]
     ||> Thm.symmetric
     ||> pair (Thm.assume \<^cterm>\<open>\<And> x. x \<in> A \<equiv> x \<in> B\<close>)
-    ||> apfst (Thm.forall_elim \<^cterm>\<open>x\<close> #> Drule.generalize ([], ["x"]) #> single)
+    ||> apfst (Thm.forall_elim \<^cterm>\<open>x\<close> #> Drule.generalize (Names.empty, Names.make_set ["x"]) #> single)
     ||> uncurry (rewrite_rule \<^context>)
     ||> pair @{thm set}
     ||> apfst (Thm.instantiate' [SOME \<^ctyp>\<open>'a\<close>] [SOME \<^cterm>\<open>B :: 'a set\<close>] #> single)
     ||> uncurry (rewrite_rule \<^context>)
     ||> Thm.implies_intr \<^cterm>\<open>\<And> x. x \<in> A \<equiv> x \<in> B\<close>
     |-> Thm.equal_intr
-    |> Drule.generalize (["'a"], ["A", "B"])
+    |> Drule.generalize (Names.make_set ["'a"], Names.make_set ["A", "B"])
     |> pair \<^binding>\<open>set_eq_iff\<close>
     |> Thm.no_attributes
     |> Global_Theory.add_thm
@@ -795,7 +796,7 @@ ML \<open>
     |-> Thm.equal_elim
     |> Thm.forall_elim \<^cterm>\<open>f :: 'a \<Rightarrow> 'b\<close>
     |> rewrite_rule \<^context> [@{thm elem}]
-    |> Drule.generalize (["'a", "'b"], ["f"])
+    |> Drule.generalize (Names.make_set ["'a", "'b"], Names.make_set ["f"])
     |> pair \<^binding>\<open>C_iff\<close>
     |> Thm.no_attributes
     |> Global_Theory.add_thm
