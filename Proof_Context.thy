@@ -42,8 +42,8 @@ signature BASIC_UTIL = sig
 end
 structure Util = struct
   fun super_thy (thy1, thy2) =
-    if Context.subthy (thy1, thy2) then thy1
-    else if Context.subthy (thy2, thy1) then thy2
+    if Context.subthy (thy1, thy2) then thy2
+    else if Context.subthy (thy2, thy1) then thy1
     else raise THEORY ("No proper supertheory", [thy1, thy2])
   val super_thy_of = apply2 Thm.theory_of_thm #> super_thy
   fun unifiers context max (t1, t2) =
@@ -116,7 +116,8 @@ structure Hilbert_Guess = struct
     end
   val nth_conv = fn ctxt => fn n => if n = 1 then K (@{thm id__def} RS @{thm meta_eq_to_obj_eq}) else nth_conv ctxt n
   val True_simp = @{lemma "(True \<and> A) = A" by simp} |> meta_eq
-  fun conj_elim_tac ctxt = (REPEAT_ALL_NEW (eresolve_tac ctxt [@{thm conjE}]) ORELSE' (K all_tac)) THEN' assume_tac ctxt
+  fun conj_elim_tac ctxt =
+    REPEAT_ALL_NEW ((assume_tac ctxt ORELSE' K all_tac) THEN_ALL_NEW eresolve_tac ctxt [@{thm conjE}])
   fun maybe_skolem ctxt = Variable.is_body ctxt ? Name.skolem
   fun maybe_dest_skolem ctxt = Variable.is_body ctxt ? Name.dest_skolem
   \<comment> \<open>
